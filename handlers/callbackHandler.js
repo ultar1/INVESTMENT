@@ -9,10 +9,8 @@ const {
 } = require('../services/keyboards');
 const { PLANS, MIN_WITHDRAWAL, MIN_DEPOSIT, ADMIN_CHAT_ID, WELCOME_BONUS } = require('../config');
 
-// --- THIS IS THE FIX ---
 // Safety function to prevent .toFixed crash
 const toFixedSafe = (num, digits = 2) => (typeof num === 'number' ? num : 0).toFixed(digits);
-// --- END OF FIX ---
 
 // Helper to edit message
 async function editOrSend(bot, chatId, msgId, text, options) {
@@ -23,14 +21,17 @@ async function editOrSend(bot, chatId, msgId, text, options) {
     }
 }
 
-const handleCallback = async (bot, callbackQuery) => {
+// --- THIS IS THE FIX ---
+// Accept `user` and `__` (language function) as arguments
+const handleCallback = async (bot, callbackQuery, user, __) => {
+// --- END OF FIX ---
     const msg = callbackQuery.message;
     const chatId = msg.chat.id;
     const msgId = msg.message_id;
     const data = callbackQuery.data;
     const from = callbackQuery.from;
 
-    const user = await User.findOne({ where: { telegramId: from.id } });
+    // const user = await User.findOne({ where: { telegramId: from.id } }); // <-- REMOVED! We get it from index.js
     
     if (!user) return bot.answerCallbackQuery(callbackQuery.id);
 
@@ -55,8 +56,11 @@ const handleCallback = async (bot, callbackQuery) => {
         }
         
         const txUser = tx.User;
+        // --- THIS IS THE FIX ---
+        // Set locale to the *user's* language before sending notification
         i18n.setLocale(txUser.language);
-        const __ = i18n.__;
+        const admin__ = i18n.__; // Create a new `__` for the *transaction user*
+        // --- END OF FIX ---
         
         const t = await sequelize.transaction();
         try {
@@ -69,7 +73,7 @@ const handleCallback = async (bot, callbackQuery) => {
                 await bot.editMessageText(msg.text + `\n\nApproved by ${from.first_name}`, {
                     chat_id: chatId, message_id: msgId, reply_markup: null
                 });
-                await bot.sendMessage(txUser.telegramId, __("withdraw.notify_user_approved", toFixedSafe(tx.amount)));
+                await bot.sendMessage(txUser.telegramId, admin__("withdraw.notify_user_approved", toFixedSafe(tx.amount)));
             } else if (action === 'reject') {
                 tx.status = 'failed';
                 await tx.save({ transaction: t });
@@ -79,7 +83,7 @@ const handleCallback = async (bot, callbackQuery) => {
                 await bot.editMessageText(msg.text + `\n\nRejected by ${from.first_name}`, {
                     chat_id: chatId, message_id: msgId, reply_markup: null
                 });
-                await bot.sendMessage(txUser.telegramId, __("withdraw.notify_user_rejected", toFixedSafe(tx.amount)));
+                await bot.sendMessage(txUser.telegramId, admin__("withdraw.notify_user_rejected", toFixedSafe(tx.amount)));
             }
         } catch (e) {
             await t.rollback();
@@ -91,9 +95,7 @@ const handleCallback = async (bot, callbackQuery) => {
     
     // --- End of Admin Logic ---
 
-    // Set locale for the user who clicked the button
-    i18n.setLocale(user.language);
-    let __ = i18n.__;
+    // const __ = i18n.__; // <-- REMOVED! We use the one passed from index.js
 
     try {
         // --- Language Selection ---
@@ -101,16 +103,17 @@ const handleCallback = async (bot, callbackQuery) => {
             user.language = data.split('_')[2];
             await user.save();
             
+            // Re-set locale with the NEW language
             i18n.setLocale(user.language);
-            __ = i18n.__;
+            const new__ = i18n.__; // Create a new `__` for the response
             
             await bot.deleteMessage(chatId, msgId);
-            await bot.sendMessage(chatId, __("language_set", __("language_name"), from.first_name), {
+            await bot.sendMessage(chatId, new__("language_set", new__("language_name"), from.first_name), {
                 reply_markup: getMainMenuKeyboard(user)
             });
 
             if (user.stateContext && user.stateContext.isNewUser) {
-                await bot.sendMessage(chatId, __("welcome_bonus_message", toFixedSafe(WELCOME_BONUS)));
+                await bot.sendMessage(chatId, new__("welcome_bonus_message", toFixedSafe(WELCOME_BONUS)));
                 user.stateContext = {};
                 await user.save();
             }
@@ -240,7 +243,7 @@ const handleCallback = async (bot, callbackQuery) => {
             await user.save();
             
             const minWithdrawalText = toFixedSafe(MIN_WITHDRAWAL);
-            const text = __("withdraw.wallet_set_success", user.walletAddress, network.toUpperCase(), minWithdrawalText);
+S            const text = __("withdraw.wallet_set_success", user.walletAddress, network.toUpperCase(), minWithdrawalText);
             await editOrSend(bot, chatId, msgId, text, {
                 reply_markup: getCancelKeyboard(user)
             });
