@@ -2,7 +2,7 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const TelegramBot = require('node-telegram-bot-api');
 const { sequelize } = require('./models');
-const { PORT, BOT_TOKEN, WEBHOOK_DOMAIN, ADMIN_CHAT_ID } = require('./config');
+const { PORT, BOT_TOKEN, WEBHOOK_DOMAIN, ADMIN_CHAT_ID, BOT_USERNAME } = require('./config'); // Added BOT_USERNAME
 const i18n = require('./services/i18n');
 const { registerUser } = require('./handlers/startHandler');
 const { handleMessage } = require('./handlers/messageHandler');
@@ -52,10 +52,19 @@ app.get('/health', (req, res) => {
     res.status(200).send('OK');
 });
 
-// --- Helper function for Admin Notifications ---
-async function notifyAdminOfActivity(bot, from, action) {
-    if (!ADMIN_CHAT_ID) return; 
+// --- NEW: Helper function for Admin Notifications ---
+/**
+ * Sends a non-blocking notification to the admin on user activity.
+ * This creates its own bot instance to avoid any webhook conflicts.
+ */
+async function notifyAdminOfActivity(from) {
+    if (!ADMIN_CHAT_ID) return; // Don't run if no admin ID
 
+    // Create a new bot instance just for sending this message
+    // This is more reliable than passing the main 'bot' object
+    const notifyBot = new TelegramBot(BOT_TOKEN);
+
+    // Helper to sanitize text for HTML
     const sanitize = (text) => {
         if (!text) return 'N/A';
         return text.toString().replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -64,7 +73,8 @@ async function notifyAdminOfActivity(bot, from, action) {
     const time = new Date().toLocaleTimeString('en-GB', { timeZone: 'UTC' });
     const name = sanitize(from.first_name);
     const username = from.username ? `@${from.username}` : 'N/A';
-    const actionText = sanitize(action) || 'Interaction';
+    // --- FIX: Match your requested format ---
+    const actionText = sanitize(`@${BOT_USERNAME || 'FIN_TRUSTBOT'}`);
 
     const message = [
         `<b>User Online:</b>`,
@@ -76,7 +86,7 @@ async function notifyAdminOfActivity(bot, from, action) {
     ].join('\n');
 
     try {
-        bot.sendMessage(ADMIN_CHAT_ID, message, { parse_mode: 'HTML' });
+        await notifyBot.sendMessage(ADMIN_CHAT_ID, message, { parse_mode: 'HTML' });
     } catch (error) {
         console.error('Failed to send admin notification:', error.message);
     }
@@ -87,7 +97,7 @@ async function notifyAdminOfActivity(bot, from, action) {
 // 1. /start command
 bot.onText(/\/start(?: (.+))?/, async (msg, match) => {
     const chatId = msg.chat.id;
-    notifyAdminOfActivity(bot, msg.from, msg.text);
+    notifyAdminOfActivity(msg.from); // Notify admin
     
     const referrerCode = match ? match[1] : null;
     try {
@@ -100,7 +110,7 @@ bot.onText(/\/start(?: (.+))?/, async (msg, match) => {
 
 // 2. Callback Queries (Button Clicks)
 bot.on('callback_query', async (callbackQuery) => {
-    notifyAdminOfActivity(bot, callbackQuery.from, `Button: ${callbackQuery.data}`);
+    notifyAdminOfActivity(callbackQuery.from); // Notify admin
     
     try {
         await handleCallback(bot, callbackQuery);
@@ -120,7 +130,7 @@ bot.on('message', async (msg) => {
             return bot.sendMessage(chatId, "Please start the bot by sending /start");
         }
         
-        notifyAdminOfActivity(bot, msg.from, msg.text);
+        notifyAdminOfActivity(msg.from); // Notify admin
         
         i18n.setLocale(user.language);
 
@@ -142,16 +152,11 @@ app.listen(PORT, async () => {
         await sequelize.authenticate();
         console.log('PostgreSQL connected successfully.');
         
-        // --- THIS IS THE FIX ---
-        // We are changing 'alter: true' to 'force: true'.
-        // This will DELETE all tables and rebuild them from scratch.
-        // This will fix the 'UNIQUE' error by creating the table correctly.
-        //
-        // **IMPORTANT**: After the bot runs successfully ONCE,
-        // you should change this back to 'alter: true' or remove it
-        // to prevent data loss on every restart.
-        await sequelize.sync({ force: true }); 
-        console.log('All models were synchronized: FORCED REBUILD.');
+        // --- FIX for previous crashes ---
+        // We will try 'alter' first. If you still have crashes,
+        // change this back to 'force: true' for ONE deploy.
+        await sequelize.sync({ alter: true }); 
+        console.log('All models were synchronized successfully (alter).');
         
     } catch (error) {
         console.error('Unable to sync database:', error);
