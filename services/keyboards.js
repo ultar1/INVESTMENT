@@ -72,11 +72,11 @@ const getCancelKeyboard = (user) => {
     };
 };
 
-const getBackKeyboard = (user, "back_to_main") => {
+const getBackKeyboard = (user, callback_data = "back_to_main") => {
     const __ = setLocale(user).__;
     return {
         inline_keyboard: [
-            [{ text: __('common.back'), callback_data: "back_to_main" }]
+            [{ text: __('common.back'), callback_data: callback_data }]
         ]
     };
 };
@@ -90,6 +90,20 @@ const getMakeInvestmentButton = (user) => {
     };
 }
 
+// NEW keyboard for admin withdrawal review
+const getAdminReviewKeyboard = (transactionId, i18nInstance) => {
+    // We pass the i18nInstance (__) so it uses the correct language
+    const __ = i18nInstance;
+    return {
+        inline_keyboard: [
+            [
+                { text: __("withdraw.admin_approve"), callback_data: `admin_approve_${transactionId}` },
+                { text: __("withdraw.admin_reject"), callback_data: `admin_reject_${transactionId}` }
+            ]
+        ]
+    };
+};
+
 module.exports = {
     getLanguageKeyboard,
     getMainMenuKeyboard,
@@ -98,5 +112,6 @@ module.exports = {
     getNetworkKeyboard,
     getCancelKeyboard,
     getBackKeyboard,
-    getMakeInvestmentButton
+    getMakeInvestmentButton,
+    getAdminReviewKeyboard // NEW EXPORT
 };
