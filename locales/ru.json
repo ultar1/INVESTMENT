@@ -1,86 +1,86 @@
 {
-"welcome": "Welcome! Please select your language.",
-"language_set": "Language set to English. Welcome, %s!",
-"main_menu_title": "Main Menu\n\nWelcome back, %s!",
-"error_generic": "An error occurred. Please try again or contact support.",
+"welcome": "Добро пожаловать! Пожалуйста, выберите ваш язык.",
+"language_set": "Язык установлен на Русский. Добро пожаловать, %s!",
+"main_menu_title": "Главное меню\n\nС возвращением, %s!",
+"error_generic": "Произошла ошибка. Пожалуйста, попробуйте еще раз или обратитесь в поддержку.",
 "common": {
-"back": "Back",
-"cancel": "Cancel",
-"balance": "Your balance: %.2f USDT"
+"back": "Назад",
+"cancel": "Отмена",
+"balance": "Ваш баланс: %.2f USDT"
 },
 "menu": {
-"make_investment": "Make Investment",
-"my_investments": "My Investments",
-"my_balance": "My Balance",
-"referral_program": "Referral Program",
+"make_investment": "Сделать вклад",
+"my_investments": "Мои инвестиции",
+"my_balance": "Мой баланс",
+"referral_program": "Реферальная программа",
 "faq": "FAQ",
-"support": "Support"
+"support": "Поддержка"
 },
 "plans": {
-"title": "Choose an investment plan:",
-"plan_1_button": "Plan 1: 15%% for 24 hours",
-"plan_2_button": "Plan 2: 20%% for 72 hours",
-"plan_3_button": "Plan 3: 27%% for 7 days",
-"plan_4_button": "Plan 4: 32%% for 30 days",
-"details": "Plan Details:\nProfit: %s%%\nDuration: %s hours\nLimits: %s - %s USDT\n\n%s\n\nPlease enter the amount you wish to invest:",
-"invest_success": "Success! You have invested %.2f USDT in the %s plan. It will mature in %s hours.",
-"err_min_amount": "Minimum investment is %s USDT.",
-"err_max_amount": "Maximum investment is %s USDT.",
-"err_insufficient_funds": "Insufficient funds. Your balance is %.2f USDT.",
-"err_invalid_amount": "Please enter a valid number."
+"title": "Выберите инвестиционный план:",
+"plan_1_button": "План 1: 15%% за 24 часа",
+"plan_2_button": "План 2: 20%% за 72 часа",
+"plan_3_button": "План 3: 27%% за 7 дней",
+"plan_4_button": "План 4: 32%% за 30 дней",
+"details": "Детали плана:\nПрибыль: %s%%\nДлительность: %s часов\nЛимиты: %s - %s USDT\n\n%s\n\nПожалуйста, введите сумму, которую хотите инвестировать:",
+"invest_success": "Успех! Вы инвестировали %.2f USDT в план %s. Он завершится через %s часов.",
+"err_min_amount": "Минимальная инвестиция: %s USDT.",
+"err_max_amount": "Максимальная инвестиция: %s USDT.",
+"err_insufficient_funds": "Недостаточно средств. Ваш баланс: %.2f USDT.",
+"err_invalid_amount": "Пожалуйста, введите корректное число."
 },
 "investments": {
-"title": "My Running Investments",
-"no_investments": "You have no active investments.\n\nClick the button below to make your first one!",
-"investment_entry": "Plan: %s%% for %s hours\nAmount: %.2f USDT\nProfit: %.2f USDT\nMatures in: %s"
+"title": "Мои активные инвестиции",
+"no_investments": "У вас нет активных инвестиций.\n\nНажмите кнопку ниже, чтобы сделать первую!",
+"investment_entry": "План: %s%% за %s часов\nСумма: %.2f USDT\nПрибыль: %.2f USDT\nЗавершится через: %s"
 },
 "balance": {
-"title": "My Balance\n\nMain Balance: %.2f USDT\nTotal Invested: %.2f USDT\nTotal Withdrawn: %.2f USDT",
-"deposit": "Deposit",
-"withdraw": "Withdraw",
-"transactions": "Transaction History"
+"title": "Мой баланс\n\nОсновной баланс: %.2f USDT\nВсего инвестировано: %.2f USDT\nВсего выведено: %.2f USDT",
+"deposit": "Пополнить",
+"withdraw": "Вывести",
+"transactions": "История транзакций"
 },
 "deposit": {
-"ask_amount": "Please enter the amount you wish to deposit (Min: %s USDT):",
-"min_error": "Minimum deposit is %s USDT.",
-"invoice_created": "An invoice for <b>%s USDT</b> has been created.\n\nPlease use the button below to pay. You will be able to select your preferred cryptocurrency (BTC, USDT, etc.) on the payment page.\n\nThis invoice is valid for 24 hours.",
-"pay_button": "Go to Payment Page",
-"api_error": "Could not create a deposit invoice. Please try again later.",
-"ipn_success": "Your deposit of %s USDT has been confirmed and added to your balance!"
+"ask_amount": "Пожалуйста, введите сумму, которую хотите внести (Мин: %s USDT):",
+"min_error": "Минимальная сумма пополнения: %s USDT.",
+"invoice_created": "Счет на <b>%s USDT</b> был создан.\n\nПожалуйста, используйте кнопку ниже для оплаты. Вы сможете выбрать предпочитаемую криптовалюту (BTC, USDT и т.д.) на странице оплаты.\n\nСчет действителен 24 часа.",
+"pay_button": "Перейти к оплате",
+"api_error": "Не удалось создать счет на пополнение. Пожалуйста, попробуйте позже.",
+"ipn_success": "Ваш депозит на %s USDT был подтвержден и добавлен на ваш баланс!"
 },
 "withdraw": {
-"min_error": "Minimum withdrawal is %.2f USDT.",
-"insufficient_funds": "Insufficient funds. You only have %.2f USDT to withdraw.",
-"ask_wallet": "Please enter your USDT (TRC20 or BEP20) wallet address:",
-"ask_network": "Is this a TRC20 (Tron) or BEP20 (BSC) address?",
-"wallet_set_success": "Wallet address set to: %s (%s)\n\nNow, please enter the amount you wish to withdraw (Min: %s USDT):",
-"ask_amount": "Your wallet: %s (%s)\n%s\n\nPlease enter the amount you wish to withdraw (Min: %s USDT):",
-"request_success": "Your withdrawal request for %.2f USDT has been submitted and is pending manual review. This may take up to 12 hours.",
-"request_failed": "Withdrawal Error: %s. Please contact support if this persists.",
-"invalid_wallet": "Invalid wallet address. Please try again.",
-"notify_admin": "New withdrawal request:\n\nUser: %s (%s)\nAmount: %.2f USDT\nWallet: %s (%s)\n\nTransaction ID: %s",
-"admin_approve": "Approve",
-"admin_reject": "Reject",
-"notify_user_approved": "Your withdrawal request for %.2f USDT has been approved and processed.",
-"notify_user_rejected": "Your withdrawal request for %.2f USDT has been rejected. The amount has been returned to your balance."
+"min_error": "Минимальная сумма вывода: %.2f USDT.",
+"insufficient_funds": "Недостаточно средств. У вас есть только %.2f USDT для вывода.",
+"ask_wallet": "Пожалуйста, введите ваш адрес кошелька USDT (TRC20 или BEP20):",
+"ask_network": "Это адрес TRC20 (Tron) или BEP20 (BSC)?",
+"wallet_set_success": "Адрес кошелька установлен: %s (%s)\n\nТеперь введите сумму, которую хотите вывести (Мин: %s USDT):",
+"ask_amount": "Ваш кошелек: %s (%s)\n%s\n\nПожалуйста, введите сумму для вывода (Мин: %s USDT):",
+"request_success": "Ваш запрос на вывод %.2f USDT был отправлен и ожидает ручной проверки. Это может занять до 12 часов.",
+"request_failed": "Ошибка вывода: %s. Пожалуйста, свяжитесь с поддержкой, если проблема повторится.",
+"invalid_wallet": "Неверный адрес кошелька. Пожалуйста, попробуйте еще раз.",
+"notify_admin": "Новый запрос на вывод:\n\nПользователь: %s (%s)\nСумма: %.2f USDT\nКошелек: %s (%s)\n\nID транзакции: %s",
+"admin_approve": "Одобрить",
+"admin_reject": "Отклонить",
+"notify_user_approved": "Ваш запрос на вывод %.2f USDT был одобрен и обработан.",
+"notify_user_rejected": "Ваш запрос на вывод %.2f USDT был отклонен. Сумма возвращена на ваш баланс."
 },
 "transactions": {
-"title": "Transaction History",
-"no_transactions": "You have no transactions yet.",
-"entry": "%s | %s | %.2f USDT | Status: %s"
+"title": "История транзакций",
+"no_transactions": "У вас пока нет транзакций.",
+"entry": "%s | %s | %.2f USDT | Статус: %s"
 },
 "referral": {
-"title": "Referral Program",
-"link": "Your referral link:",
-"conditions_title": "Program conditions:",
-"stats_all_title": "All-time statistics:",
-"earnings_title": "Referral earnings:"
+"title": "Реферальная программа",
+"link": "Ваша реферальная ссылка:",
+"conditions_title": "Условия программы:",
+"stats_all_title": "Статистика за все время:",
+"earnings_title": "Реферальный доход:"
 },
 "faq": {
-"title": "Frequently Asked Questions\n\n(Admin: Add your FAQ content here)"
+"title": "Часто задаваемые вопросы\n\n(Админ: Добавьте ваш FAQ здесь)"
 },
 "support": {
-"title": "Support\n\nFor technical support or any inquiries, please contact our admin: @%s"
+"title": "Поддержка\n\nДля технической поддержки или по любым вопросам, пожалуйста, свяжитесь с нашим админом: @%s"
 },
-"action_canceled": "Action canceled."
+"action_canceled": "Действие отменено."
 }
