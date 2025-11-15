@@ -43,8 +43,7 @@
 "deposit": {
 "ask_amount": "Por favor, introduce la cantidad que deseas depositar (Mín: %s USDT):",
 "min_error": "El depósito mínimo es %s USDT.",
-"invoice_created": "Se ha creado una factura por <b>%s USDT</b>.\n\nPor favor, usa el botón de abajo para pagar. Podrás seleccionar tu criptomoneda preferida (BTC, USDT, etc.) en la página de pago.\n\nEsta factura es válida por 24 horas.",
-"pay_button": "Ir a la página de pago",
+"invoice_created": "Para depositar <b>%s USDT</b>, por favor envía <b>USDT (BEP20)</b> a la siguiente dirección:\n\n%s\n\nTu saldo se acreditará automáticamente después de la confirmación del pago. Esta factura es válida por 24 horas.",
 "api_error": "No se pudo crear una factura de depósito. Por favor, inténtalo más tarde.",
 "ipn_success": "¡Tu depósito de %s USDT ha sido confirmado y añadido a tu saldo!"
 },
