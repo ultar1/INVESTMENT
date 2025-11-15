@@ -44,11 +44,7 @@ app.post(`/bot${BOT_TOKEN}`, (req, res) => {
 
 // --- NowPayments IPN Webhook Endpoint ---
 app.post('/payment-ipn', async (req, res) => {
-    // --- THIS IS THE FIX ---
-    // Pass the 'bot' instance to the IPN handler
-    // so it can send messages in the user's language.
     await handleNowPaymentsIPN(req, res, bot);
-    // --- END OF FIX ---
 });
 
 // --- Health Check Endpoint ---
@@ -132,7 +128,7 @@ bot.on('callback_query', async (callbackQuery) => {
     try {
         await handleCallback(bot, callbackQuery);
     } catch (error) {
-        console.error('Error handling callback:', error);
+        console.error('Callback handler error:', error);
     }
 });
 
@@ -140,16 +136,13 @@ bot.on('callback_query', async (callbackQuery) => {
 bot.on('message', async (msg) => {
     const chatId = msg.chat.id;
     if (msg.text && msg.text.startsWith('/')) {
-        if (msg.text.startsWith('/start')) return; // Handled by onText
-        // Let other commands (like /add) fall through
+        if (msg.text.startsWith('/start')) return;
     }
     
     try {
         const user = await User.findOne({ where: { telegramId: msg.from.id } });
         if (!user) {
-            // Only respond to /start if user doesn't exist
             if (msg.text && msg.text.startsWith('/start')) {
-                // Let the /start listener handle it
             } else {
                 bot.sendMessage(chatId, "Please start the bot by sending /start");
             }
@@ -162,7 +155,6 @@ bot.on('message', async (msg) => {
         if (user.state !== 'none' && msg.text) {
             await handleTextInput(bot, msg, user);
         } else if (msg.text && !msg.text.startsWith('/')) {
-            // Only handle non-commands
             await handleMessage(bot, msg, user);
         }
     } catch (error) {
@@ -175,7 +167,7 @@ bot.on('message', async (msg) => {
 bot.onText(/\/add (\d+\.?\d*) (\d+)/, async (msg, match) => {
     const chatId = msg.chat.id;
     const adminId = msg.from.id;
-    if (adminId.toString() !== ADMIN_CHAT_ID) { return; }
+    if (adminId.toString() !== ADMIN_CHAT_ID.toString()) { return; }
     try {
         const amount = parseFloat(match[1]);
         const telegramId = match[2];
@@ -189,11 +181,8 @@ bot.onText(/\/add (\d+\.?\d*) (\d+)/, async (msg, match) => {
 
         await bot.sendMessage(chatId, `Success: Added ${amount} USDT to ${user.firstName} (ID: ${user.telegramId}).\nNew Main Balance: ${user.mainBalance.toFixed(2)} USDT.`);
         
-        // --- THIS IS THE FIX ---
-        // Set locale for user notification
         i18n.setLocale(user.language);
         await bot.sendMessage(user.telegramId, i18n.__('admin.add_balance_user', amount.toFixed(2), user.mainBalance.toFixed(2)));
-        // --- END OF FIX ---
     } catch (error) {
         console.error("Admin /add error:", error);
         await bot.sendMessage(chatId, "Admin: An error occurred.");
@@ -204,7 +193,7 @@ bot.onText(/\/add (\d+\.?\d*) (\d+)/, async (msg, match) => {
 bot.onText(/\/remove (\d+\.?\d*) (\d+)/, async (msg, match) => {
     const chatId = msg.chat.id;
     const adminId = msg.from.id;
-    if (adminId.toString() !== ADMIN_CHAT_ID) { return; }
+    if (adminId.toString() !== ADMIN_CHAT_ID.toString()) { return; }
     try {
         const amount = parseFloat(match[1]);
         const telegramId = match[2];
@@ -221,11 +210,8 @@ bot.onText(/\/remove (\d+\.?\d*) (\d+)/, async (msg, match) => {
 
         await bot.sendMessage(chatId, `Success: Removed ${amount} USDT from ${user.firstName} (ID: ${user.telegramId}).\nNew Main Balance: ${user.mainBalance.toFixed(2)} USDT.`);
         
-        // --- THIS IS THE FIX ---
-        // Set locale for user notification
         i18n.setLocale(user.language);
         await bot.sendMessage(user.telegramId, i18n.__('admin.remove_balance_user', amount.toFixed(2), user.mainBalance.toFixed(2)));
-        // --- END OF FIX ---
     } catch (error) {
         console.error("Admin /remove error:", error);
         await bot.sendMessage(chatId, "Admin: An error occurred.");
@@ -240,8 +226,11 @@ app.listen(PORT, async () => {
         await sequelize.authenticate();
         console.log('PostgreSQL connected successfully.');
         
-        await sequelize.sync({ alter: true }); 
-        console.log('All models were synchronized successfully (alter).');
+        // --- THIS IS THE FIX ---
+        // We will force a database rebuild ONE TIME to fix the schema.
+        await sequelize.sync({ force: true }); 
+        console.log('All models were synchronized: FORCED REBUILD.');
+        // --- END OF FIX ---
         
     } catch (error) {
         console.error('Unable to sync database:', error);
