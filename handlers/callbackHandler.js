@@ -40,8 +40,14 @@ const handleCallback = async (bot, callbackQuery) => {
         const action = data.split('_')[1];
         const txId = data.split('_')[2];
         const tx = await Transaction.findOne({ where: { id: txId }, include: User });
-        if (!tx) { return; }
-        if (tx.status !== 'pending') { return; }
+        if (!tx) { 
+            await bot.editMessageText(msg.text + "\n\nError: Transaction not found.", { chat_id: chatId, message_id: msgId });
+            return bot.answerCallbackQuery(callbackQuery.id);
+        }
+        if (tx.status !== 'pending') { 
+            await bot.editMessageText(msg.text + "\n\nError: This transaction has already been processed.", { chat_id: chatId, message_id: msgId });
+            return bot.answerCallbackQuery(callbackQuery.id);
+        }
         const txUser = tx.User;
         i18n.setLocale(txUser.language);
         const __ = i18n.__;
@@ -155,13 +161,14 @@ const handleCallback = async (bot, callbackQuery) => {
         }
         
         // --- REMOVED: Deposit (Step 2) 'deposit_network_' ---
-        // This logic is no longer needed as it's handled
-        // in textHandler.js after the amount is entered.
+        // This logic is no longer needed.
         
         // --- Withdraw (Step 1) ---
         else if (data === 'withdraw') {
             // (Unchanged)
-            if (user.balance < MIN_WITHDRAWAL) { /* ... */ }
+            if (user.balance < MIN_WITHDRAWAL) { 
+                return bot.answerCallbackQuery(callbackQuery.id, __("withdraw.min_error", MIN_WITHDRAWAL), true);
+            }
             if (!user.walletAddress) {
                 user.state = 'awaiting_wallet_address';
                 await user.save();
@@ -209,7 +216,11 @@ const handleCallback = async (bot, callbackQuery) => {
                 order: [['createdAt', 'DESC']], 
                 limit: 10 
             });
-            if (txs.length === 0) { /* ... */ }
+            if (txs.length === 0) {
+                return editOrSend(bot, chatId, msgId, __("transactions.no_transactions"), {
+                    reply_markup: getBackKeyboard(user, "back_to_main")
+                });
+            }
             let text = __("transactions.title") + "\n\n";
             txs.forEach(tx => {
                 const date = tx.createdAt.toLocaleDateString('en-GB');
