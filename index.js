@@ -135,17 +135,17 @@ bot.on('callback_query', async (callbackQuery) => {
 // 3. Text Messages
 bot.on('message', async (msg) => {
     const chatId = msg.chat.id;
+    // --- THIS IS THE FIX ---
+    // If a message starts with '/', let the 'onText' listeners handle it.
     if (msg.text && msg.text.startsWith('/')) {
-        if (msg.text.startsWith('/start')) return;
+        return; // Do not process as a main menu command
     }
+    // --- END OF FIX ---
     
     try {
         const user = await User.findOne({ where: { telegramId: msg.from.id } });
         if (!user) {
-            if (msg.text && msg.text.startsWith('/start')) {
-            } else {
-                bot.sendMessage(chatId, "Please start the bot by sending /start");
-            }
+            // User doesn't exist, only respond to /start (which is handled above)
             return;
         }
         
@@ -154,7 +154,7 @@ bot.on('message', async (msg) => {
 
         if (user.state !== 'none' && msg.text) {
             await handleTextInput(bot, msg, user);
-        } else if (msg.text && !msg.text.startsWith('/')) {
+        } else if (msg.text) { // All non-commands land here
             await handleMessage(bot, msg, user);
         }
     } catch (error) {
@@ -167,7 +167,7 @@ bot.on('message', async (msg) => {
 bot.onText(/\/add (\d+\.?\d*) (\d+)/, async (msg, match) => {
     const chatId = msg.chat.id;
     const adminId = msg.from.id;
-    if (adminId.toString() !== ADMIN_CHAT_ID.toString()) { return; }
+    if (adminId.toString() !== ADMIN_CHAT_ID.toString()) { return; } // Security Check
     try {
         const amount = parseFloat(match[1]);
         const telegramId = match[2];
@@ -193,7 +193,7 @@ bot.onText(/\/add (\d+\.?\d*) (\d+)/, async (msg, match) => {
 bot.onText(/\/remove (\d+\.?\d*) (\d+)/, async (msg, match) => {
     const chatId = msg.chat.id;
     const adminId = msg.from.id;
-    if (adminId.toString() !== ADMIN_CHAT_ID.toString()) { return; }
+    if (adminId.toString() !== ADMIN_CHAT_ID.toString()) { return; } // Security Check
     try {
         const amount = parseFloat(match[1]);
         const telegramId = match[2];
