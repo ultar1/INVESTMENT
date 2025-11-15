@@ -84,12 +84,9 @@ const handleMessage = async (bot, msg, user) => {
             response += `<b>${__("referral.title")}</b>\n\n`;
             response += `${__("referral.link")}\n<code>${refLink}</code>\n\n`;
             response += `<b>${__("referral.conditions_title")}</b>\n`;
-            // --- THIS IS THE FIX ---
-            // Use .toFixed(0) to remove decimals
             response += `Level 1: ${(REFERRAL_LEVELS[1] * 100).toFixed(0)}%\n`;
             response += `Level 2: ${(REFERRAL_LEVELS[2] * 100).toFixed(0)}%\n`;
             response += `Level 3: ${(REFERRAL_LEVELS[3] * 100).toFixed(0)}%\n\n`;
-            // --- END OF FIX ---
             response += `<b>${__("referral.stats_all_title")}</b>\n`;
             response += `Total referrals: ${total_referrals}\n`;
             response += ` ├ Level 1: ${counts.l1}\n`;
@@ -101,10 +98,22 @@ const handleMessage = async (bot, msg, user) => {
             await bot.sendMessage(chatId, response, { parse_mode: 'HTML' });
         }
         
-        // ❓ FAQ & 📞 Support
+        // ❓ FAQ
         else if (text === __('menu.faq')) {
-            await bot.sendMessage(chatId, __('faq.title'));
+            // --- THIS IS THE FIX ---
+            const faqText = `<b>${__("faq.title")}</b>\n\n${__("faq.link_text")}`;
+            await bot.sendMessage(chatId, faqText, {
+                parse_mode: 'HTML',
+                reply_markup: {
+                    inline_keyboard: [
+                        [{ text: __("faq.button_text"), url: __("faq.url") }]
+                    ]
+                }
+            });
+            // --- END OF FIX ---
         }
+        
+        // 📞 Support
         else if (text === __('menu.support')) {
             await bot.sendMessage(chatId, __('support.title', ADMIN_USERNAME));
         }
