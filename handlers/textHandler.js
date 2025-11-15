@@ -23,7 +23,6 @@ const handleTextInput = async (bot, msg, user) => {
     try {
         // --- 1. Awaiting Investment Amount ---
         if (user.state === 'awaiting_investment_amount') {
-            // (This section is unchanged)
             const amount = parseFloat(text);
             const plan = PLANS[user.stateContext.planId];
             if (isNaN(amount) || amount <= 0) return bot.sendMessage(chatId, __("plans.err_invalid_amount"), { reply_markup: getCancelKeyboard(user) });
@@ -62,29 +61,30 @@ const handleTextInput = async (bot, msg, user) => {
                 return bot.sendMessage(chatId, __("deposit.min_error", MIN_DEPOSIT), { reply_markup: getCancelKeyboard(user) });
             }
             
-            // --- SIMPLIFIED LOGIC ---
-            // Create the BEP20 invoice immediately.
-            // We no longer ask for a network.
+            // --- NEW INVOICE LOGIC ---
+            // Create the generic invoice using the /invoice endpoint.
             const invoice = await generateDepositInvoice(user, amount);
             
-            if (invoice && invoice.pay_address) {
+            if (invoice && invoice.invoice_url) {
+                // Save the 'order_id' as our txId
                 await Transaction.create({
                     user: user.id,
                     type: 'deposit',
                     amount: invoice.price_amount, // The amount in USD
                     status: 'pending',
-                    txId: invoice.payment_id // Save NowPayments ID
+                    txId: invoice.order_id // Use order_id from invoice
                 });
                 
                 user.state = 'none';
                 await user.save();
 
-                // Send the new message with the specific address
-                const text = __("deposit.invoice_created", invoice.pay_amount, invoice.pay_address);
+                // Send the new message with the INVOICE URL
+                const text = __("deposit.invoice_created", invoice.price_amount);
                 await bot.sendMessage(chatId, text, { 
-                    parse_mode: 'Markdown', // Use Markdown for the `code` block
+                    parse_mode: 'HTML',
                     reply_markup: {
                         inline_keyboard: [
+                            [{ text: __("deposit.pay_button"), url: invoice.invoice_url }],
                             [{ text: __("common.cancel"), callback_data: "cancel_action" }]
                         ]
                     }
@@ -93,12 +93,11 @@ const handleTextInput = async (bot, msg, user) => {
             } else {
                 await bot.sendMessage(chatId, __("deposit.api_error"));
             }
-            // --- END OF SIMPLIFIED LOGIC ---
+            // --- END OF NEW LOGIC ---
         }
 
         // --- 3. Awaiting Wallet Address ---
         else if (user.state === 'awaiting_wallet_address') {
-            // (This section is unchanged)
             if (!isValidWallet(text)) {
                 return bot.sendMessage(chatId, __("withdraw.invalid_wallet"), { reply_markup: getCancelKeyboard(user) });
             }
@@ -113,7 +112,6 @@ const handleTextInput = async (bot, msg, user) => {
         
         // --- 4. Awaiting Withdrawal Amount ---
         else if (user.state === 'awaiting_withdrawal_amount') {
-            // (This section is unchanged)
             const amount = parseFloat(text);
             if (isNaN(amount) || amount <= 0) return bot.sendMessage(chatId, __("plans.err_invalid_amount"), { reply_markup: getCancelKeyboard(user) });
             if (amount < MIN_WITHDRAWAL) return bot.sendMessage(chatId, __("withdraw.min_error", MIN_WITHDRAWAL), { reply_markup: getCancelKeyboard(user) });
