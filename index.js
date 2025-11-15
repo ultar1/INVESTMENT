@@ -107,16 +107,15 @@ async function notifyAdminOfActivity(from, action) {
     }
 }
 
-// --- THIS IS THE FIX: Safety function to get user and set language ---
+// --- Safety function to get user and set language ---
 async function getUserAndLocale(from) {
     const user = await User.findOne({ where: { telegramId: from.id } });
-    if (!user) return null;
+    if (!user) return { user: null, __: i18n.__ }; // Return default language if no user
     
     i18n.setLocale(user.language);
     const __ = i18n.__;
     return { user, __ };
 }
-// --- END OF FIX ---
 
 // --- Bot Listeners (Attached to the 'bot' instance) ---
 
@@ -139,13 +138,13 @@ bot.on('callback_query', async (callbackQuery) => {
     notifyAdminOfActivity(from, `Button: ${callbackQuery.data}`);
     
     try {
-        // --- THIS IS THE FIX ---
-        // Get user and language *before* calling the handler
         const { user, __ } = await getUserAndLocale(from);
-        if (!user) return bot.answerCallbackQuery(callbackQuery.id);
-        // Pass user and language function to the handler
+        if (!user) {
+            // User doesn't exist, tell them to start
+            await bot.answerCallbackQuery(callbackQuery.id, "Please send /start to begin.", true);
+            return;
+        }
         await handleCallback(bot, callbackQuery, user, __);
-        // --- END OF FIX ---
     } catch (error) {
         console.error('Callback handler error:', error);
     }
@@ -159,10 +158,7 @@ bot.on('message', async (msg) => {
     }
     
     try {
-        // --- THIS IS THE FIX ---
-        // Get user and language *before* calling the handler
         const { user, __ } = await getUserAndLocale(msg.from);
-        // --- END OF FIX ---
         
         if (!user) {
             return bot.sendMessage(chatId, "Please start the bot by sending /start");
@@ -170,7 +166,6 @@ bot.on('message', async (msg) => {
         
         notifyAdminOfActivity(msg.from, msg.text);
 
-        // Pass user and language function to the handlers
         if (user.state !== 'none' && msg.text) {
             await handleTextInput(bot, msg, user, __);
         } else if (msg.text) {
@@ -200,10 +195,8 @@ bot.onText(/\/add (\d+\.?\d*) (\d+)/, async (msg, match) => {
 
         await bot.sendMessage(chatId, `Success: Added ${amount} USDT to ${user.firstName} (ID: ${user.telegramId}).\nNew Main Balance: ${user.mainBalance.toFixed(2)} USDT.`);
         
-        // --- THIS IS THE FIX ---
         i18n.setLocale(user.language);
         const __ = i18n.__;
-        // --- END OF FIX ---
         await bot.sendMessage(user.telegramId, __('admin.add_balance_user', amount.toFixed(2), user.mainBalance.toFixed(2)));
     } catch (error) {
         console.error("Admin /add error:", error);
@@ -232,10 +225,8 @@ bot.onText(/\/remove (\d+\.?\d*) (\d+)/, async (msg, match) => {
 
         await bot.sendMessage(chatId, `Success: Removed ${amount} USDT from ${user.firstName} (ID: ${user.telegramId}).\nNew Main Balance: ${user.mainBalance.toFixed(2)} USDT.`);
         
-        // --- THIS IS THE FIX ---
         i18n.setLocale(user.language);
         const __ = i18n.__;
-        // --- END OF FIX ---
         await bot.sendMessage(user.telegramId, __('admin.remove_balance_user', amount.toFixed(2), user.mainBalance.toFixed(2)));
     } catch (error) {
         console.error("Admin /remove error:", error);
@@ -253,7 +244,7 @@ app.listen(PORT, async () => {
         
         // --- THIS IS THE FIX ---
         // Force a database rebuild ONE TIME to fix the schema.
-        await sequelize.sync({ alter: true }); 
+        await sequelize.sync({ force: true }); 
         console.log('All models were synchronized: FORCED REBUILD.');
         // --- END OF FIX ---
         
