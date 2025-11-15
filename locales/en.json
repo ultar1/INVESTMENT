@@ -43,7 +43,8 @@
 "deposit": {
 "ask_amount": "Please enter the amount you wish to deposit (Min: %s USDT):",
 "min_error": "Minimum deposit is %s USDT.",
-"invoice_created": "Please send exactly %s USDT (TRC20/BEP20) to the address below:\n\n%s\n\nYour balance will be credited automatically after payment is confirmed. This invoice is valid for 24 hours.",
+"ask_network": "You are depositing %s USDT.\n\nPlease select the network you will use to send the payment:",
+"invoice_created": "Please send exactly %s USDT (%s Network) to the address below:\n\n%s\n\nYour balance will be credited automatically after payment is confirmed. This invoice is valid for 24 hours.",
 "api_error": "Could not create a deposit invoice. Please try again later.",
 "ipn_success": "✅ Your deposit of %s USDT has been confirmed and added to your balance!"
 },
