@@ -19,10 +19,16 @@ const registerUser = async (bot, msg, referrerCode) => {
     if (user) {
         // Existing user
         i18n.setLocale(user.language);
+
+        // --- FIX: Create the `__` function and pass it to the keyboard ---
+        // This makes sure the keyboard shows the user's saved language.
+        const __ = i18n.__;
         const text = i18n.__('main_menu_title', from.first_name);
         bot.sendMessage(chatId, text, {
-            reply_markup: getMainMenuKeyboard(user)
+            reply_markup: getMainMenuKeyboard(user, __) // Pass `__` here
         });
+        // --- END OF FIX ---
+
     } else {
         // New user
         let referrer = null;
@@ -36,11 +42,11 @@ const registerUser = async (bot, msg, referrerCode) => {
             username: from.username,
             language: from.language_code || 'en',
             referrerId: referrer ? referrer.id : null,
-            // --- THIS IS THE FIX ---
+            // --- This part was already correct ---
             mainBalance: 0,
-            bonusBalance: WELCOME_BONUS, // Give the welcome bonus to the new field
+            bonusBalance: WELCOME_BONUS, // Give the welcome bonus
             stateContext: { isNewUser: true } // Flag to send message after lang select
-            // --- END OF FIX ---
+            // --- End of correct part ---
         });
         
         // Ask for language
