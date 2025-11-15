@@ -9,34 +9,33 @@ const Transaction = sequelize.define('Transaction', {
     },
     type: {
         type: DataTypes.ENUM('deposit', 'withdrawal', 'referral_bonus', 'investment_profit'),
-        required: true
+        allowNull: false
     },
     amount: {
         type: DataTypes.DOUBLE,
-        required: true
+        allowNull: false
     },
     status: {
         type: DataTypes.ENUM('pending', 'completed', 'failed'),
-        required: true
+        allowNull: false
     },
-    txId: { // e.g., NowPayments payment_id or payout_id
+    // --- THIS IS THE FIX ---
+    // This is the simplest, most stable way to define
+    // a column that can be null but must be unique if it's not null.
+    txId: {
         type: DataTypes.STRING,
-        defaultValue: null,
-        // --- THIS IS THE FIX ---
-        // We make the column itself unique, instead of
-        // trying to add it as a SET DEFAULT property.
+        allowNull: true,
         unique: true
-        // --- END OF FIX ---
     },
-    walletAddress: { // User's wallet for withdrawals
+    // --- END OF FIX ---
+    walletAddress: {
         type: DataTypes.STRING,
-        defaultValue: null
+        allowNull: true
     },
-    level: { // For referral bonus
+    level: {
         type: DataTypes.INTEGER,
-        defaultValue: null
+        allowNull: true
     }
-    // 'userId' and 'fromUserId' will be added by associations
 });
 
 module.exports = Transaction;
