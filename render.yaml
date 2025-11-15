@@ -4,12 +4,12 @@ services:
     name: telegram-investment-bot
     env: node
     plan: free # Start with free, upgrade if needed
-    buildCommand: "npm install"
-    startCommand: "npm start"
-    healthCheckPath: /health # A simple check for Render
+    buildCommand: "yarn install" # <-- Switched to yarn to match your log
+    startCommand: "yarn start" # <-- Switched to yarn
+    healthCheckPath: /health
     envVars:
       - key: NODE_VERSION
-        value: 20
+        value: 20 # Use a modern Node.js version
       - key: DATABASE_URL
         fromDatabase:
           name: investment-db
@@ -20,6 +20,8 @@ services:
         sync: false # Set in Render dashboard
       - key: NOWPAYMENTS_IPN_SECRET
         sync: false # Set in Render dashboard
+      - key: ADMIN_CHAT_ID
+        sync: false # Set in Render dashboard
       - key: ADMIN_USERNAME
         value: "FINTRUST_admin"
       - key: BOT_USERNAME
@@ -28,7 +30,7 @@ services:
         fromService:
           type: web
           name: telegram-investment-bot
-          property: host # Automatically gets your Render URL
+          property: host
 
 databases:
   # The PostgreSQL Database
