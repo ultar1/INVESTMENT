@@ -64,7 +64,7 @@ const getWithdrawNetworkKeyboard = (user) => {
 };
 
 // --- REMOVED getDepositNetworkKeyboard ---
-// It is no longer needed with the new generic invoice flow.
+// It is no longer needed.
 
 const getCancelKeyboard = (user) => {
     const __ = setLocale(user).__;
