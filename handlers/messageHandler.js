@@ -26,12 +26,16 @@ async function getReferralCounts(userId) {
 }
 
 // Safety function to prevent .toFixed crash
-const toFixedSafe = (num, digits = 2) => (typeof num === 'number' ? num : 0).toFixed(digits);
+const toFixedSafe = (num, digits = 2) = (typeof num === 'number' ? num : 0).toFixed(digits);
 
+
+// --- THIS IS THE FIX ---
 // Accept the `__` (language function) as an argument
 const handleMessage = async (bot, msg, user, __) => {
+// --- END OF FIX ---
     const chatId = msg.chat.id;
     const text = msg.text;
+    // const __ = i18n.__; // <-- REMOVED! We now use the passed-in `__`
 
     try {
         // 📈 Make Investment
@@ -39,13 +43,13 @@ const handleMessage = async (bot, msg, user, __) => {
             const balanceText = toFixedSafe(user.mainBalance);
             const text = __("plans.title") + "\n\n" + __("common.balance", balanceText);
             await bot.sendMessage(chatId, text, {
-                reply_markup: getInvestmentPlansKeyboard(user)
+                reply_markup: getInvestmentPlansKeyboard(user, __) // Pass `__`
             });
         }
         
         // 📊 My Investments
         else if (text === __('menu.my_investments')) {
-            await processCompletedInvestments(user.id, __);
+            await processCompletedInvestments(user.id, __); // Pass `__`
             
             const investments = await Investment.findAll({ 
                 where: { userId: user.id, status: 'running' },
@@ -54,7 +58,7 @@ const handleMessage = async (bot, msg, user, __) => {
 
             if (investments.length === 0) {
                 return bot.sendMessage(chatId, __('investments.no_investments'), {
-                    reply_markup: getMakeInvestmentButton(user)
+                    reply_markup: getMakeInvestmentButton(user, __) // Pass `__`
                 });
             }
 
@@ -82,7 +86,7 @@ const handleMessage = async (bot, msg, user, __) => {
                 toFixedSafe(user.totalWithdrawn)
             );
             await bot.sendMessage(chatId, text, {
-                reply_markup: getBalanceKeyboard(user)
+                reply_markup: getBalanceKeyboard(user, __) // Pass `__`
             });
         }
         
