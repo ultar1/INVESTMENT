@@ -1,5 +1,5 @@
 const i18n = require('../services/i18n');
-const { sequelize, User, Transaction } = require('../models');
+const { sequelize, User, Transaction, Investment } = require('../models'); // Import Investment
 const { 
     getMainMenuKeyboard, 
     getInvestmentPlansKeyboard, 
@@ -7,7 +7,7 @@ const {
     getBackKeyboard,
     getWithdrawNetworkKeyboard
 } = require('../services/keyboards');
-const { PLANS, MIN_WITHDRAWAL, MIN_DEPOSIT, ADMIN_CHAT_ID, WELCOME_BONUS } = require('../config'); // Import WELCOME_BONUS
+const { PLANS, MIN_WITHDRAWAL, MIN_DEPOSIT, ADMIN_CHAT_ID, WELCOME_BONUS } = require('../config');
 
 // Helper to edit message
 async function editOrSend(bot, chatId, msgId, text, options) {
@@ -31,10 +31,11 @@ const handleCallback = async (bot, callbackQuery) => {
 
     // --- Admin Approval Logic ---
     if (data.startsWith('admin_approve_') || data.startsWith('admin_reject_')) {
-        // (This block is unchanged)
+        // (Unchanged)
         if (!ADMIN_CHAT_ID || from.id.toString() !== ADMIN_CHAT_ID) {
             return bot.answerCallbackQuery(callbackQuery.id, "You are not authorized for this action.", true);
         }
+        // ... (rest of admin logic is unchanged) ...
         const action = data.split('_')[1];
         const txId = data.split('_')[2];
         const tx = await Transaction.findOne({ where: { id: txId }, include: User });
@@ -64,7 +65,7 @@ const handleCallback = async (bot, callbackQuery) => {
             } else if (action === 'reject') {
                 tx.status = 'failed';
                 await tx.save({ transaction: t });
-                txUser.balance += tx.amount;
+                txUser.mainBalance += tx.amount; // --- FIX: Refund mainBalance ---
                 await txUser.save({ transaction: t });
                 await t.commit();
                 await bot.editMessageText(msg.text + `\n\nRejected by ${from.first_name}`, {
@@ -88,6 +89,7 @@ const handleCallback = async (bot, callbackQuery) => {
     try {
         // --- Language Selection ---
         if (data.startsWith('set_lang_')) {
+            // (Unchanged)
             user.language = data.split('_')[2];
             await user.save();
             i18n.setLocale(user.language);
@@ -97,17 +99,11 @@ const handleCallback = async (bot, callbackQuery) => {
                 reply_markup: getMainMenuKeyboard(user)
             });
 
-            // --- THIS IS THE FIX ---
-            // Check if this was a new user
             if (user.stateContext && user.stateContext.isNewUser) {
-                // Send the bonus message
                 await bot.sendMessage(chatId, __("welcome_bonus_message", WELCOME_BONUS.toFixed(2)));
-                
-                // Clear the flag
                 user.stateContext = {};
                 await user.save();
             }
-            // --- END OF FIX ---
         }
 
         // --- Back to Main Menu ---
@@ -124,8 +120,10 @@ const handleCallback = async (bot, callbackQuery) => {
         
         // --- Show Investment Plans ---
         else if (data === 'show_invest_plans') {
-             // (Unchanged)
-             const text = __("plans.title") + "\n\n" + __("common.balance", user.balance);
+             // --- THIS IS THE FIX ---
+             // Show mainBalance, not bonusBalance
+             const text = __("plans.title") + "\n\n" + __("common.balance", user.mainBalance);
+             // --- END OF FIX ---
              await editOrSend(bot, chatId, msgId, text, {
                 reply_markup: getInvestmentPlansKeyboard(user)
             });
@@ -140,9 +138,13 @@ const handleCallback = async (bot, callbackQuery) => {
             user.state = 'awaiting_investment_amount';
             user.stateContext = { planId: plan.id };
             await user.save();
+            
+            // --- THIS IS THE FIX ---
+            // Show mainBalance, not bonusBalance
             const text = __("plans.details", 
-                plan.percent, plan.hours, plan.min, plan.max, __("common.balance", user.balance)
+                plan.percent, plan.hours, plan.min, plan.max, __("common.balance", user.mainBalance)
             );
+            // --- END OF FIX ---
             await editOrSend(bot, chatId, msgId, text, {
                 reply_markup: getCancelKeyboard(user)
             });
@@ -172,8 +174,28 @@ const handleCallback = async (bot, callbackQuery) => {
         
         // --- Withdraw (Step 1) ---
         else if (data === 'withdraw') {
-            // (Unchanged)
-            if (user.balance < MIN_WITHDRAWAL) { 
+            
+            // --- THIS IS THE FIX: UNLOCK BONUS ---
+            // Check if user has a bonus and an active investment
+            if (user.bonusBalance > 0) {
+                const activeInvestments = await Investment.count({
+                    where: { userId: user.id, status: 'running' }
+                });
+
+                if (activeInvestments > 0) {
+                    const bonus = user.bonusBalance;
+                    user.mainBalance += bonus;
+                    user.bonusBalance = 0;
+                    await user.save();
+                    
+                    // Notify user their bonus is unlocked
+                    await bot.sendMessage(chatId, __("bonus_unlocked", bonus.toFixed(2)));
+                }
+            }
+            // --- END OF FIX ---
+
+            // Check mainBalance for withdrawal
+            if (user.mainBalance < MIN_WITHDRAWAL) { 
                 return bot.answerCallbackQuery(callbackQuery.id, __("withdraw.min_error", MIN_WITHDRAWAL), true);
             }
             if (!user.walletAddress) {
@@ -185,8 +207,9 @@ const handleCallback = async (bot, callbackQuery) => {
             } else {
                 user.state = 'awaiting_withdrawal_amount';
                 await user.save();
+                // Show mainBalance
                 const text = __("withdraw.ask_amount", 
-                    user.walletAddress, user.walletNetwork.toUpperCase(), __("common.balance", user.balance), MIN_WITHDRAWAL
+                    user.walletAddress, user.walletNetwork.toUpperCase(), __("common.balance", user.mainBalance), MIN_WITHDRAWAL
                 );
                 await editOrSend(bot, chatId, msgId, text, {
                     reply_markup: getCancelKeyboard(user)
