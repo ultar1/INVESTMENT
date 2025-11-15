@@ -18,7 +18,7 @@ function isValidWallet(address) {
 const handleTextInput = async (bot, msg, user) => {
     const chatId = msg.chat.id;
     const text = msg.text;
-    const __ = i18n.__; // User's language instance
+    const __ = i18n.__;
 
     try {
         // --- 1. Awaiting Investment Amount ---
@@ -28,13 +28,9 @@ const handleTextInput = async (bot, msg, user) => {
             if (isNaN(amount) || amount <= 0) return bot.sendMessage(chatId, __("plans.err_invalid_amount"), { reply_markup: getCancelKeyboard(user) });
             if (amount < plan.min) return bot.sendMessage(chatId, __("plans.err_min_amount", plan.min), { reply_markup: getCancelKeyboard(user) });
             if (amount > plan.max) return bot.sendMessage(chatId, __("plans.err_max_amount", plan.max), { reply_markup: getCancelKeyboard(user) });
-            
-            // --- THIS IS THE FIX ---
-            // Check against mainBalance, not bonusBalance
             if (amount > user.mainBalance) {
                 return bot.sendMessage(chatId, __("plans.err_insufficient_funds", user.mainBalance), { reply_markup: getCancelKeyboard(user) });
             }
-            // --- END OF FIX ---
 
             const t = await sequelize.transaction();
             try {
@@ -46,17 +42,21 @@ const handleTextInput = async (bot, msg, user) => {
                     profitAmount: amount * (plan.percent / 100),
                     maturesAt: new Date(Date.now() + plan.hours * 60 * 60 * 1000)
                 }, { transaction: t });
-                
-                // --- THIS IS THE FIX ---
-                user.mainBalance -= amount; // Deduct from mainBalance
-                // --- END OF FIX ---
+                user.mainBalance -= amount;
                 user.totalInvested += amount;
                 user.state = 'none';
                 user.stateContext = {};
                 await user.save({ transaction: t });
                 await t.commit();
                 handleReferralBonus(user.referrerId, amount, user.id);
-                await bot.sendMessage(chatId, __("plans.invest_success", amount, __(`plans.plan_${plan.id.split('_')[1]}_button`), plan.hours));
+                
+                // --- THIS IS THE FIX ---
+                // Get the plan name from the locale file
+                const planName = __(`plans.plan_${plan.id.split('_')[1]}_button`);
+                // Send the new success message with all 3 arguments
+                await bot.sendMessage(chatId, __("plans.invest_success", amount.toFixed(2), planName, plan.hours));
+                // --- END OF FIX ---
+
             } catch (error) {
                 await t.rollback();
                 throw error; 
@@ -65,7 +65,6 @@ const handleTextInput = async (bot, msg, user) => {
         
         // --- 2. Awaiting Deposit Amount ---
         else if (user.state === 'awaiting_deposit_amount') {
-            // (Unchanged logic, just for context)
             const amount = parseFloat(text);
             if (isNaN(amount) || amount < MIN_DEPOSIT) {
                 return bot.sendMessage(chatId, __("deposit.min_error", MIN_DEPOSIT), { reply_markup: getCancelKeyboard(user) });
@@ -103,7 +102,6 @@ const handleTextInput = async (bot, msg, user) => {
 
         // --- 3. Awaiting Wallet Address ---
         else if (user.state === 'awaiting_wallet_address') {
-            // (Unchanged logic)
             if (!isValidWallet(text)) {
                 return bot.sendMessage(chatId, __("withdraw.invalid_wallet"), { reply_markup: getCancelKeyboard(user) });
             }
@@ -119,8 +117,6 @@ const handleTextInput = async (bot, msg, user) => {
         // --- 4. Awaiting Withdrawal Amount ---
         else if (user.state === 'awaiting_withdrawal_amount') {
             
-            // --- THIS IS THE FIX: UNLOCK BONUS ---
-            // Check if user has a bonus and an active investment
             if (user.bonusBalance > 0) {
                 const activeInvestments = await Investment.count({
                     where: { userId: user.id, status: 'running' }
@@ -132,17 +128,14 @@ const handleTextInput = async (bot, msg, user) => {
                     user.bonusBalance = 0;
                     await user.save();
                     
-                    // Notify user their bonus is unlocked
                     await bot.sendMessage(chatId, __("bonus_unlocked", bonus.toFixed(2)));
                 }
             }
-            // --- END OF FIX ---
 
             const amount = parseFloat(text);
             if (isNaN(amount) || amount <= 0) return bot.sendMessage(chatId, __("plans.err_invalid_amount"), { reply_markup: getCancelKeyboard(user) });
             if (amount < MIN_WITHDRAWAL) return bot.sendMessage(chatId, __("withdraw.min_error", MIN_WITHDRAWAL), { reply_markup: getCancelKeyboard(user) });
             
-            // Check against mainBalance
             if (amount > user.mainBalance) {
                 return bot.sendMessage(chatId, __("withdraw.insufficient_funds", user.mainBalance), { reply_markup: getCancelKeyboard(user) });
             }
@@ -150,7 +143,7 @@ const handleTextInput = async (bot, msg, user) => {
             const t = await sequelize.transaction();
             let newTx;
             try {
-                user.mainBalance -= amount; // Deduct from mainBalance
+                user.mainBalance -= amount;
                 user.state = 'none';
                 await user.save({ transaction: t });
                 newTx = await Transaction.create({
