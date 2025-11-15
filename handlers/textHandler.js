@@ -10,20 +10,21 @@ const { PLANS, MIN_WITHDRAWAL, MIN_DEPOSIT, ADMIN_CHAT_ID, WELCOME_BONUS } = req
 const { handleReferralBonus } = require('./investmentHandler');
 const { generateDepositInvoice } = require('./paymentHandler');
 
-// --- THIS IS THE FIX ---
 // Safety function to prevent .toFixed crash
 const toFixedSafe = (num, digits = 2) => (typeof num === 'number' ? num : 0).toFixed(digits);
-// --- END OF FIX ---
 
 // Basic wallet validation
 function isValidWallet(address) {
     return (address.startsWith('T') && address.length > 30) || (address.startsWith('0x') && address.length === 42);
 }
 
-const handleTextInput = async (bot, msg, user) => {
+// --- THIS IS THE FIX ---
+// Accept `__` (language function) as an argument
+const handleTextInput = async (bot, msg, user, __) => {
+// --- END OF FIX ---
     const chatId = msg.chat.id;
     const text = msg.text;
-    const __ = i18n.__;
+    // const __ = i18n.__; // <-- REMOVED!
 
     try {
         // --- 1. Awaiting Investment Amount ---
@@ -55,7 +56,7 @@ const handleTextInput = async (bot, msg, user) => {
                 user.stateContext = {};
                 await user.save({ transaction: t });
                 await t.commit();
-                handleReferralBonus(user.referrerId, amount, user.id);
+                handleReferralBonus(user.referrerId, amount, user.id, __); // Pass `__` for notifications
                 
                 const planName = __(`plans.plan_${plan.id.split('_')[1]}_button`);
                 await bot.sendMessage(chatId, __("plans.invest_success", toFixedSafe(amount), planName, plan.hours));
@@ -168,7 +169,10 @@ const handleTextInput = async (bot, msg, user) => {
 
             if (ADMIN_CHAT_ID) {
                 try {
-                    const notifyText = __("withdraw.notify_admin", 
+                    // We must use the admin's locale (default 'en') for this message
+                    i18n.setLocale('en');
+                    const admin__ = i18n.__;
+                    const notifyText = admin__("withdraw.notify_admin", 
                         user.firstName || 'N/A', 
                         user.telegramId, 
                         toFixedSafe(amount), 
@@ -176,7 +180,7 @@ const handleTextInput = async (bot, msg, user) => {
                         user.walletNetwork.toUpperCase(),
                         newTx.id
                     );
-                    const adminKeyboard = getAdminReviewKeyboard(newTx.id, __);
+                    const adminKeyboard = getAdminReviewKeyboard(newTx.id, admin__);
                     await bot.sendMessage(ADMIN_CHAT_ID, notifyText, {
                         reply_markup: adminKeyboard
                     });
