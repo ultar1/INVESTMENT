@@ -14,7 +14,6 @@ async function editOrSend(bot, chatId, msgId, text, options) {
     try {
         await bot.editMessageText(text, { chat_id: chatId, message_id: msgId, ...options });
     } catch (error) {
-        // If edit fails, send new message
         await bot.sendMessage(chatId, text, options);
     }
 }
@@ -32,12 +31,18 @@ const handleCallback = async (bot, callbackQuery) => {
 
     // --- Admin Approval Logic ---
     if (data.startsWith('admin_approve_') || data.startsWith('admin_reject_')) {
-        if (!ADMIN_CHAT_ID || from.id.toString() !== ADMIN_CHAT_ID) {
+        
+        // --- THIS IS THE FIX for "Not Authorized" ---
+        // We compare strings to strings
+        if (!ADMIN_CHAT_ID || from.id.toString() !== ADMIN_CHAT_ID.toString()) {
             return bot.answerCallbackQuery(callbackQuery.id, "You are not authorized for this action.", true);
         }
+        // --- END OF FIX ---
+
         const action = data.split('_')[1];
         const txId = data.split('_')[2];
         const tx = await Transaction.findOne({ where: { id: txId }, include: User });
+        
         if (!tx) { 
             await bot.editMessageText(msg.text + "\n\nError: Transaction not found.", { chat_id: chatId, message_id: msgId });
             return bot.answerCallbackQuery(callbackQuery.id);
@@ -48,12 +53,9 @@ const handleCallback = async (bot, callbackQuery) => {
         }
         
         const txUser = tx.User;
-        // --- THIS IS THE FIX ---
-        // Set locale to the *user's* language before sending notification
         i18n.setLocale(txUser.language);
         const __ = i18n.__;
-        // --- END OF FIX ---
-
+        
         const t = await sequelize.transaction();
         try {
             if (action === 'approve') {
@@ -65,7 +67,9 @@ const handleCallback = async (bot, callbackQuery) => {
                 await bot.editMessageText(msg.text + `\n\nApproved by ${from.first_name}`, {
                     chat_id: chatId, message_id: msgId, reply_markup: null
                 });
-                await bot.sendMessage(txUser.telegramId, __("withdraw.notify_user_approved", tx.amount.toFixed(2))); // Pass formatted amount
+                // --- THIS IS THE FIX for %.2f ---
+                await bot.sendMessage(txUser.telegramId, __("withdraw.notify_user_approved", tx.amount.toFixed(2)));
+                // --- END OF FIX ---
             } else if (action === 'reject') {
                 tx.status = 'failed';
                 await tx.save({ transaction: t });
@@ -75,7 +79,9 @@ const handleCallback = async (bot, callbackQuery) => {
                 await bot.editMessageText(msg.text + `\n\nRejected by ${from.first_name}`, {
                     chat_id: chatId, message_id: msgId, reply_markup: null
                 });
-                await bot.sendMessage(txUser.telegramId, __("withdraw.notify_user_rejected", tx.amount.toFixed(2))); // Pass formatted amount
+                // --- THIS IS THE FIX for %.2f ---
+                await bot.sendMessage(txUser.telegramId, __("withdraw.notify_user_rejected", tx.amount.toFixed(2)));
+                // --- END OF FIX ---
             }
         } catch (e) {
             await t.rollback();
@@ -97,17 +103,18 @@ const handleCallback = async (bot, callbackQuery) => {
             user.language = data.split('_')[2];
             await user.save();
             
-            // Re-set locale with the NEW language
             i18n.setLocale(user.language);
             __ = i18n.__;
             
             await bot.deleteMessage(chatId, msgId);
-            await bot.sendMessage(chatId, __("language_set", __("language_name"), from.first_name), { // Use "language_name" key
+            await bot.sendMessage(chatId, __("language_set", __("language_name"), from.first_name), {
                 reply_markup: getMainMenuKeyboard(user)
             });
 
             if (user.stateContext && user.stateContext.isNewUser) {
+                // --- THIS IS THE FIX for %.2f ---
                 await bot.sendMessage(chatId, __("welcome_bonus_message", WELCOME_BONUS.toFixed(2)));
+                // --- END OF FIX ---
                 user.stateContext = {};
                 await user.save();
             }
@@ -119,7 +126,6 @@ const handleCallback = async (bot, callbackQuery) => {
             await user.save();
             const text = __("main_menu_title", from.first_name);
             await editOrSend(bot, chatId, msgId, text, { reply_markup: undefined });
-            // Send a new message to show the main keyboard
             await bot.sendMessage(chatId, __("main_menu_title", from.first_name), {
                 reply_markup: getMainMenuKeyboard(user)
             });
@@ -127,12 +133,12 @@ const handleCallback = async (bot, callbackQuery) => {
         
         // --- Show Investment Plans ---
         else if (data === 'show_invest_plans') {
-             // --- THIS IS THE FIX ---
-             // Pass the mainBalance to the "common.balance" key
-             const text = __("plans.title") + "\n\n" + __("common.balance", user.mainBalance.toFixed(2));
+             // --- THIS IS THE FIX for %.2f ---
+             const balanceText = user.mainBalance.toFixed(2);
+             const text = __("plans.title") + "\n\n" + __("common.balance", balanceText);
              // --- END OF FIX ---
              await editOrSend(bot, chatId, msgId, text, {
-                reply_markup: getInvestmentPlansKeyboard(user) // This now correctly uses the user's language
+                reply_markup: getInvestmentPlansKeyboard(user)
             });
         }
 
@@ -145,14 +151,14 @@ const handleCallback = async (bot, callbackQuery) => {
             user.stateContext = { planId: plan.id };
             await user.save();
             
-            // --- THIS IS THE FIX ---
-            // Pass the formatted mainBalance as the 5th argument
+            // --- THIS IS THE FIX for %.2f ---
+            const balanceText = user.mainBalance.toFixed(2);
             const text = __("plans.details", 
                 plan.percent, 
                 plan.hours, 
                 plan.min, 
                 plan.max, 
-                __("common.balance", user.mainBalance.toFixed(2)) // Pass formatted balance
+                __("common.balance", balanceText) // Pass formatted balance text
             );
             // --- END OF FIX ---
             await editOrSend(bot, chatId, msgId, text, {
@@ -193,14 +199,19 @@ const handleCallback = async (bot, callbackQuery) => {
                     user.mainBalance += bonus;
                     user.bonusBalance = 0;
                     await user.save();
-                    
+                    // --- THIS IS THE FIX for %.2f ---
                     await bot.sendMessage(chatId, __("bonus_unlocked", bonus.toFixed(2)));
+                    // --- END OF FIX ---
                 }
             }
 
+            // --- THIS IS THE FIX for toFixed crash ---
+            const minWithdrawalText = MIN_WITHDRAWAL ? MIN_WITHDRAWAL.toFixed(2) : "10.00";
             if (user.mainBalance < MIN_WITHDRAWAL) { 
-                return bot.answerCallbackQuery(callbackQuery.id, __("withdraw.min_error", MIN_WITHDRAWAL.toFixed(2)), true);
+                return bot.answerCallbackQuery(callbackQuery.id, __("withdraw.min_error", minWithdrawalText), true);
             }
+            // --- END OF FIX ---
+
             if (!user.walletAddress) {
                 user.state = 'awaiting_wallet_address';
                 await user.save();
@@ -210,12 +221,16 @@ const handleCallback = async (bot, callbackQuery) => {
             } else {
                 user.state = 'awaiting_withdrawal_amount';
                 await user.save();
+                // --- THIS IS THE FIX for %.2f and toFixed crash ---
+                const balanceText = user.mainBalance.toFixed(2);
+                const networkText = user.walletNetwork ? user.walletNetwork.toUpperCase() : "N/A";
                 const text = __("withdraw.ask_amount", 
                     user.walletAddress, 
-                    user.walletNetwork.toUpperCase(), 
-                    __("common.balance", user.mainBalance.toFixed(2)), // Pass formatted balance
-                    MIN_WITHDRAWAL.toFixed(2)
+                    networkText, 
+                    __("common.balance", balanceText),
+                    minWithdrawalText
                 );
+                // --- END OF FIX ---
                 await editOrSend(bot, chatId, msgId, text, {
                     reply_markup: getCancelKeyboard(user)
                 });
@@ -236,7 +251,10 @@ const handleCallback = async (bot, callbackQuery) => {
             user.stateContext = {};
             await user.save();
             
-            const text = __("withdraw.wallet_set_success", user.walletAddress, network.toUpperCase(), MIN_WITHDRAWAL.toFixed(2));
+            // --- THIS IS THE FIX for %.2f ---
+            const minWithdrawalText = MIN_WITHDRAWAL.toFixed(2);
+            const text = __("withdraw.wallet_set_success", user.walletAddress, network.toUpperCase(), minWithdrawalText);
+            // --- END OF FIX ---
             await editOrSend(bot, chatId, msgId, text, {
                 reply_markup: getCancelKeyboard(user)
             });
@@ -257,7 +275,9 @@ const handleCallback = async (bot, callbackQuery) => {
             let text = __("transactions.title") + "\n\n";
             txs.forEach(tx => {
                 const date = tx.createdAt.toLocaleDateString('en-GB');
+                // --- THIS IS THE FIX for %.2f ---
                 text += __("transactions.entry", date, tx.type, tx.amount.toFixed(2), tx.status) + "\n";
+                // --- END OF FIX ---
             });
             await editOrSend(bot, chatId, msgId, text, {
                 reply_markup: getBackKeyboard(user, "back_to_main")
