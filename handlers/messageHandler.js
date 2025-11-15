@@ -27,12 +27,7 @@ async function getReferralCounts(userId) {
 
 // --- THIS IS THE FIX ---
 // Safety function to prevent .toFixed crash
-function toFixedSafe(num, digits = 2) {
-    if (typeof num !== 'number') {
-        num = 0; // Default to 0 if undefined or null
-    }
-    return num.toFixed(digits);
-}
+const toFixedSafe = (num, digits = 2) => (typeof num === 'number' ? num : 0).toFixed(digits);
 // --- END OF FIX ---
 
 
@@ -44,10 +39,8 @@ const handleMessage = async (bot, msg, user) => {
     try {
         // 📈 Make Investment
         if (text === __('menu.make_investment')) {
-            // --- THIS IS THE FIX for %.2f ---
             const balanceText = toFixedSafe(user.mainBalance);
             const text = __("plans.title") + "\n\n" + __("common.balance", balanceText);
-            // --- END OF FIX ---
             await bot.sendMessage(chatId, text, {
                 reply_markup: getInvestmentPlansKeyboard(user)
             });
@@ -72,7 +65,6 @@ const handleMessage = async (bot, msg, user) => {
             for (const inv of investments) {
                 const plan = PLANS[inv.planId];
                 const remaining = formatDuration(inv.maturesAt - new Date());
-                // --- THIS IS THE FIX for %.2f ---
                 response += __("investments.investment_entry", 
                     inv.profitPercent, 
                     plan.hours, 
@@ -80,21 +72,18 @@ const handleMessage = async (bot, msg, user) => {
                     toFixedSafe(inv.profitAmount), 
                     remaining
                 ) + "\n\n";
-                // --- END OF FIX ---
             }
             await bot.sendMessage(chatId, response);
         }
 
         // 💰 My Balance
         else if (text === __('menu.my_balance')) {
-            // --- THIS IS THE FIX for %.2f and Balance Text ---
             const text = __("balance.title", 
                 toFixedSafe(user.mainBalance), 
                 toFixedSafe(user.bonusBalance), 
                 toFixedSafe(user.totalInvested), 
                 toFixedSafe(user.totalWithdrawn)
             );
-            // --- END OF FIX ---
             await bot.sendMessage(chatId, text, {
                 reply_markup: getBalanceKeyboard(user)
             });
