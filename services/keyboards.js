@@ -1,11 +1,9 @@
-const i18n = require('./i18n');
+const i18n = require('../services/i18n');
 
-// Set locale for i18n
-function setLocale(user) {
-    const lang = user ? user.language : 'en';
-    i18n.setLocale(lang);
-    return i18n;
-}
+// --- THIS IS THE FIX ---
+// This function is no longer used globally.
+// We will pass the user and `__` function to each keyboard.
+// --- END OF FIX ---
 
 const getLanguageKeyboard = () => {
     return {
@@ -16,8 +14,10 @@ const getLanguageKeyboard = () => {
     };
 };
 
-const getMainMenuKeyboard = (user) => {
-    const __ = setLocale(user).__;
+// --- THIS IS THE FIX ---
+// Accept `__` (language function) as an argument
+const getMainMenuKeyboard = (user, __) => {
+// --- END OF FIX ---
     return {
         keyboard: [
             [{ text: __('menu.make_investment') }],
@@ -29,8 +29,7 @@ const getMainMenuKeyboard = (user) => {
     };
 };
 
-const getBalanceKeyboard = (user) => {
-    const __ = setLocale(user).__;
+const getBalanceKeyboard = (user, __) => {
     return {
         inline_keyboard: [
             [{ text: __('balance.deposit'), callback_data: "deposit" }, { text: __('balance.withdraw'), callback_data: "withdraw" }],
@@ -39,12 +38,7 @@ const getBalanceKeyboard = (user) => {
     };
 };
 
-const getInvestmentPlansKeyboard = (user) => {
-    // --- THIS IS THE FIX ---
-    // We must set the locale INSIDE this function
-    // to get the correct language for the plan buttons.
-    const __ = setLocale(user).__;
-    // --- END OF FIX ---
+const getInvestmentPlansKeyboard = (user, __) => {
     return {
         inline_keyboard: [
             [{ text: __('plans.plan_1_button'), callback_data: "invest_plan_1" }],
@@ -56,8 +50,7 @@ const getInvestmentPlansKeyboard = (user) => {
     };
 };
 
-const getWithdrawNetworkKeyboard = (user) => {
-    const __ = setLocale(user).__;
+const getWithdrawNetworkKeyboard = (user, __) => {
     return {
          inline_keyboard: [
             [{ text: "TRC20 (Tron)", callback_data: "set_network_trc20" }, { text: "BEP20 (BSC)", callback_data: "set_network_bep20" }],
@@ -66,8 +59,7 @@ const getWithdrawNetworkKeyboard = (user) => {
     };
 };
 
-const getCancelKeyboard = (user) => {
-    const __ = setLocale(user).__;
+const getCancelKeyboard = (user, __) => {
     return {
         inline_keyboard: [
             [{ text: __('common.cancel'), callback_data: "cancel_action" }]
@@ -75,8 +67,7 @@ const getCancelKeyboard = (user) => {
     };
 };
 
-const getBackKeyboard = (user, callback_data = "back_to_main") => {
-    const __ = setLocale(user).__;
+const getBackKeyboard = (user, callback_data = "back_to_main", __) => {
     return {
         inline_keyboard: [
             [{ text: __('common.back'), callback_data: callback_data }]
@@ -84,8 +75,7 @@ const getBackKeyboard = (user, callback_data = "back_to_main") => {
     };
 };
 
-const getMakeInvestmentButton = (user) => {
-     const __ = setLocale(user).__;
+const getMakeInvestmentButton = (user, __) => {
     return {
         inline_keyboard: [
             [{ text: __('menu.make_investment'), callback_data: "show_invest_plans" }]
@@ -94,7 +84,7 @@ const getMakeInvestmentButton = (user) => {
 }
 
 const getAdminReviewKeyboard = (transactionId, i18nInstance) => {
-    const __ = i18nInstance;
+    const __ = i18nInstance; // This one is correct, it uses the admin's language
     return {
         inline_keyboard: [
             [
