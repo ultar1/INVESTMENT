@@ -22,7 +22,11 @@ const Transaction = sequelize.define('Transaction', {
     txId: { // e.g., NowPayments payment_id or payout_id
         type: DataTypes.STRING,
         defaultValue: null,
+        // --- THIS IS THE FIX ---
+        // We make the column itself unique, instead of
+        // trying to add it as a SET DEFAULT property.
         unique: true
+        // --- END OF FIX ---
     },
     walletAddress: { // User's wallet for withdrawals
         type: DataTypes.STRING,
