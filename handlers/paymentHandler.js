@@ -5,7 +5,7 @@ const {
     NOWPAYMENTS_IPN_SECRET, 
     WEBHOOK_DOMAIN,
     BOT_TOKEN,
-    APP_URL // Assuming APP_URL is your WEBHOOK_DOMAIN
+    BOT_USERNAME // Use BOT_USERNAME from config
 } = require('../config');
 const { sequelize, User, Transaction } = require('../models');
 const TelegramBot = require('node-telegram-bot-api');
@@ -13,24 +13,24 @@ const TelegramBot = require('node-telegram-bot-api');
 const NOWPAYMENTS_API_URL = "https://api.nowpayments.io/v1";
 
 /**
- * Creates a generic deposit invoice using the /invoice endpoint.
- * This allows the user to select their own coin.
- * @param {object} user - The user object
- * @param {number} amount - The amount in USD
+ * Creates a BEP20-ONLY deposit invoice
  */
 const generateDepositInvoice = async (user, amount) => {
     
     const orderId = `user_${user.id}_${Date.now()}`;
 
-    // This logic is from your example code, using the /invoice endpoint
     const body = {
         price_amount: amount.toFixed(2),
         price_currency: 'usd',
+        // --- THIS IS THE FIX ---
+        // We force BEP20-only by specifying 'usdtbsc'
+        pay_currency: 'usdtbsc',
+        // --- END OF FIX ---
         order_id: orderId,
-        order_description: `Deposit for user ${user.id}`,
+        order_description: `Deposit for user ${user.id} (BEP20)`,
         ipn_callback_url: `${WEBHOOK_DOMAIN}/payment-ipn`,
-        success_url: `https://t.me/${(require('../config').BOT_USERNAME)}`, // Return to bot on success
-        cancel_url: `https://t.me/${(require('../config').BOT_USERNAME)}`  // Return to bot on cancel
+        success_url: `https://t.me/${BOT_USERNAME}`,
+        cancel_url: `https://t.me/${BOT_USERNAME}`
     };
 
     try {
@@ -50,7 +50,7 @@ const generateDepositInvoice = async (user, amount) => {
             return null;
         }
         
-        // Return the full invoice object, which includes 'invoice_url'
+        // This will now be an invoice for BEP20 only
         return invoice;
 
     } catch (error) {
@@ -61,25 +61,18 @@ const generateDepositInvoice = async (user, amount) => {
 
 /**
  * Verifies the IPN signature from NowPayments.
- * This logic is from your example code.
  */
 function verifyIPN(body, signature, secret) {
     try {
-        // Sort the keys to create a deterministic JSON string
         const sortedBody = {};
         Object.keys(body).sort().forEach(key => {
             sortedBody[key] = body[key];
         });
-        
-        // Remove 'x-nowpayments-sig' if it exists in the body
         delete sortedBody['x-nowpayments-sig'];
-        
         const bodyString = JSON.stringify(sortedBody);
-        
         const hmac = crypto.createHmac('sha512', secret);
         hmac.update(bodyString, 'utf-8');
         const calculatedSignature = hmac.digest('hex');
-        
         if (calculatedSignature !== signature) {
             console.warn("IPN Signature Mismatch:", {
                 calculated: calculatedSignature,
@@ -87,7 +80,6 @@ function verifyIPN(body, signature, secret) {
             });
             return false;
         }
-        
         return true;
     } catch (e) {
         console.error("IPN verification logic error:", e.message);
@@ -107,7 +99,6 @@ const handleNowPaymentsIPN = async (req, res) => {
     }
     
     try {
-        // Use the new verifier from your example
         const isValid = verifyIPN(req.body, signature, NOWPAYMENTS_IPN_SECRET);
         if (!isValid) {
             console.warn("Invalid NowPayments IPN signature received.");
@@ -118,11 +109,8 @@ const handleNowPaymentsIPN = async (req, res) => {
         return res.status(500).send("Verification error.");
     }
     
-    // 2. Process the IPN (Signature is valid)
     const { order_id, payment_status, outcome_amount, type, id, price_amount } = req.body;
     
-    // --- Handle DEPOSIT confirmation ---
-    // Your example uses 'order_id', so we will use that.
     if (payment_status === 'finished') {
         const tx = await Transaction.findOne({ where: { txId: order_id } });
         if (!tx || tx.status !== 'pending') {
@@ -138,15 +126,15 @@ const handleNowPaymentsIPN = async (req, res) => {
 
         const t = await sequelize.transaction();
         try {
-            // Use outcome_amount (actual crypto received) or price_amount (original USD)
-            // We'll trust price_amount as that's what the user intended to deposit
             const depositedAmount = parseFloat(price_amount);
             
             tx.status = 'completed';
             tx.amount = depositedAmount;
             await tx.save({ transaction: t });
             
-            user.balance += depositedAmount;
+            // --- THIS IS THE FIX ---
+            user.mainBalance += depositedAmount; // Add to mainBalance
+            // --- END OF FIX ---
             await user.save({ transaction: t });
             
             await t.commit();
@@ -165,10 +153,9 @@ const handleNowPaymentsIPN = async (req, res) => {
         }
     }
     
-    // --- Handle WITHDRAWAL confirmation ---
-    // (This part is unchanged as withdrawals are manual)
     if (type === 'payout' && (payment_status === 'finished' || payment_status === 'failed')) {
-        const tx = await Transaction.findOne({ where: { txId: id } }); // 'id' is used for payout
+        // ... (This logic is correct and unchanged) ...
+        const tx = await Transaction.findOne({ where: { txId: id } });
         if (!tx || tx.status !== 'pending') {
             console.log(`IPN for payout ${id} already processed or not found.`);
             return res.status(200).send('OK');
@@ -184,7 +171,7 @@ const handleNowPaymentsIPN = async (req, res) => {
             tx.status = 'failed';
             const user = await User.findByPk(tx.userId);
             if(user) {
-                user.balance += tx.amount;
+                user.mainBalance += tx.amount;
                 await user.save();
             }
         }
