@@ -8,7 +8,7 @@ const {
 } = require('../services/keyboards');
 const { PLANS, MIN_WITHDRAWAL, MIN_DEPOSIT, ADMIN_CHAT_ID } = require('../config');
 const { handleReferralBonus } = require('./investmentHandler');
-const { generateDepositInvoice } = require('./paymentHandler'); // We need this again
+const { generateDepositInvoice } = require('./paymentHandler'); // We need this
 
 // Basic wallet validation
 function isValidWallet(address) {
@@ -63,11 +63,11 @@ const handleTextInput = async (bot, msg, user) => {
             }
             
             // --- SIMPLIFIED LOGIC ---
-            // Create the generic invoice immediately.
+            // Create the BEP20 invoice immediately.
             // We no longer ask for a network.
             const invoice = await generateDepositInvoice(user, amount);
             
-            if (invoice && invoice.invoice_url) {
+            if (invoice && invoice.pay_address) {
                 await Transaction.create({
                     user: user.id,
                     type: 'deposit',
@@ -79,13 +79,12 @@ const handleTextInput = async (bot, msg, user) => {
                 user.state = 'none';
                 await user.save();
 
-                // Send the new message with the INVOICE URL
-                const text = __("deposit.invoice_created", invoice.price_amount, invoice.invoice_url);
+                // Send the new message with the specific address
+                const text = __("deposit.invoice_created", invoice.pay_amount, invoice.pay_address);
                 await bot.sendMessage(chatId, text, { 
-                    parse_mode: 'HTML',
+                    parse_mode: 'Markdown', // Use Markdown for the `code` block
                     reply_markup: {
                         inline_keyboard: [
-                            [{ text: __("deposit.pay_button"), url: invoice.invoice_url }],
                             [{ text: __("common.cancel"), callback_data: "cancel_action" }]
                         ]
                     }
