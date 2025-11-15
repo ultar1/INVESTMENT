@@ -5,10 +5,15 @@ const {
     NOWPAYMENTS_IPN_SECRET, 
     WEBHOOK_DOMAIN,
     BOT_TOKEN,
-    BOT_USERNAME // Use BOT_USERNAME from config
+    BOT_USERNAME
 } = require('../config');
 const { sequelize, User, Transaction } = require('../models');
-const TelegramBot = require('node-telegram-bot-api');
+
+// --- THIS IS THE FIX ---
+// We remove the TelegramBot import here, 
+// because it's passed from index.js now.
+// const TelegramBot = require('node-telegram-bot-api');
+// --- END OF FIX ---
 
 const NOWPAYMENTS_API_URL = "https://api.nowpayments.io/v1";
 
@@ -22,10 +27,7 @@ const generateDepositInvoice = async (user, amount) => {
     const body = {
         price_amount: amount.toFixed(2),
         price_currency: 'usd',
-        // --- THIS IS THE FIX ---
-        // We force BEP20-only by specifying 'usdtbsc'
-        pay_currency: 'usdtbsc',
-        // --- END OF FIX ---
+        pay_currency: 'usdtbsc', // Forcing BEP20
         order_id: orderId,
         order_description: `Deposit for user ${user.id} (BEP20)`,
         ipn_callback_url: `${WEBHOOK_DOMAIN}/payment-ipn`,
@@ -50,7 +52,6 @@ const generateDepositInvoice = async (user, amount) => {
             return null;
         }
         
-        // This will now be an invoice for BEP20 only
         return invoice;
 
     } catch (error) {
@@ -89,8 +90,11 @@ function verifyIPN(body, signature, secret) {
 
 /**
  * Handles incoming IPN webhooks from NowPayments
+ * --- THIS IS THE FIX ---
+ * We now accept the `bot` instance as an argument
  */
-const handleNowPaymentsIPN = async (req, res) => {
+const handleNowPaymentsIPN = async (req, res, bot) => {
+    // --- END OF FIX ---
     
     const signature = req.headers['x-nowpayments-sig'];
     if (!signature) {
@@ -132,17 +136,17 @@ const handleNowPaymentsIPN = async (req, res) => {
             tx.amount = depositedAmount;
             await tx.save({ transaction: t });
             
-            // --- THIS IS THE FIX ---
-            user.mainBalance += depositedAmount; // Add to mainBalance
-            // --- END OF FIX ---
+            user.mainBalance += depositedAmount;
             await user.save({ transaction: t });
             
             await t.commit();
             
             try {
-                const bot = new TelegramBot(BOT_TOKEN);
+                // --- THIS IS THE FIX ---
+                // Set the user's language before sending the message
                 i18n.setLocale(user.language);
-                await bot.sendMessage(user.telegramId, i18n.__('deposit.ipn_success', depositedAmount));
+                await bot.sendMessage(user.telegramId, i18n.__('deposit.ipn_success', depositedAmount.toFixed(2)));
+                // --- END OF FIX ---
             } catch (notifyError) {
                 console.error("Failed to notify user of deposit:", notifyError);
             }
@@ -154,7 +158,6 @@ const handleNowPaymentsIPN = async (req, res) => {
     }
     
     if (type === 'payout' && (payment_status === 'finished' || payment_status === 'failed')) {
-        // ... (This logic is correct and unchanged) ...
         const tx = await Transaction.findOne({ where: { txId: id } });
         if (!tx || tx.status !== 'pending') {
             console.log(`IPN for payout ${id} already processed or not found.`);
