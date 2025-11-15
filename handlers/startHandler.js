@@ -1,6 +1,7 @@
 const { User } = require('../models');
 const { getLanguageKeyboard, getMainMenuKeyboard } = require('../services/keyboards');
 const i18n = require('../services/i18n');
+const { WELCOME_BONUS } = require('../config'); // Import the bonus
 
 // Find user by their telegramId (which is the ref code)
 async function findUserByReferrerCode(code) {
@@ -34,7 +35,11 @@ const registerUser = async (bot, msg, referrerCode) => {
             firstName: from.first_name,
             username: from.username,
             language: from.language_code || 'en',
-            referrerId: referrer ? referrer.id : null
+            referrerId: referrer ? referrer.id : null,
+            // --- THIS IS THE FIX ---
+            balance: WELCOME_BONUS, // Give the welcome bonus
+            stateContext: { isNewUser: true } // Flag to send message after lang select
+            // --- END OF FIX ---
         });
         
         // Ask for language
