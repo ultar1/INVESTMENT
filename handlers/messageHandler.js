@@ -28,14 +28,10 @@ async function getReferralCounts(userId) {
 // Safety function to prevent .toFixed crash
 const toFixedSafe = (num, digits = 2) => (typeof num === 'number' ? num : 0).toFixed(digits);
 
-
-// --- THIS IS THE FIX ---
 // Accept the `__` (language function) as an argument
 const handleMessage = async (bot, msg, user, __) => {
-// --- END OF FIX ---
     const chatId = msg.chat.id;
     const text = msg.text;
-    // const __ = i18n.__; // <-- REMOVED! We now use the passed-in `__`
 
     try {
         // 📈 Make Investment
@@ -49,7 +45,7 @@ const handleMessage = async (bot, msg, user, __) => {
         
         // 📊 My Investments
         else if (text === __('menu.my_investments')) {
-            await processCompletedInvestments(user.id, __); // Pass `__` for notifications
+            await processCompletedInvestments(user.id, __);
             
             const investments = await Investment.findAll({ 
                 where: { userId: user.id, status: 'running' },
