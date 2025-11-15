@@ -25,6 +25,16 @@ async function getReferralCounts(userId) {
     return { l1: l1_ids.length, l2: l2_ids.length, l3: l3_count };
 }
 
+// --- THIS IS THE FIX ---
+// Safety function to prevent .toFixed crash
+function toFixedSafe(num, digits = 2) {
+    if (typeof num !== 'number') {
+        num = 0; // Default to 0 if undefined or null
+    }
+    return num.toFixed(digits);
+}
+// --- END OF FIX ---
+
 
 const handleMessage = async (bot, msg, user) => {
     const chatId = msg.chat.id;
@@ -35,7 +45,7 @@ const handleMessage = async (bot, msg, user) => {
         // 📈 Make Investment
         if (text === __('menu.make_investment')) {
             // --- THIS IS THE FIX for %.2f ---
-            const balanceText = user.mainBalance.toFixed(2);
+            const balanceText = toFixedSafe(user.mainBalance);
             const text = __("plans.title") + "\n\n" + __("common.balance", balanceText);
             // --- END OF FIX ---
             await bot.sendMessage(chatId, text, {
@@ -66,8 +76,8 @@ const handleMessage = async (bot, msg, user) => {
                 response += __("investments.investment_entry", 
                     inv.profitPercent, 
                     plan.hours, 
-                    inv.amount.toFixed(2), 
-                    inv.profitAmount.toFixed(2), 
+                    toFixedSafe(inv.amount), 
+                    toFixedSafe(inv.profitAmount), 
                     remaining
                 ) + "\n\n";
                 // --- END OF FIX ---
@@ -78,12 +88,11 @@ const handleMessage = async (bot, msg, user) => {
         // 💰 My Balance
         else if (text === __('menu.my_balance')) {
             // --- THIS IS THE FIX for %.2f and Balance Text ---
-            // We pass all 4 formatted variables
             const text = __("balance.title", 
-                user.mainBalance.toFixed(2), 
-                user.bonusBalance.toFixed(2), 
-                user.totalInvested.toFixed(2), 
-                user.totalWithdrawn.toFixed(2)
+                toFixedSafe(user.mainBalance), 
+                toFixedSafe(user.bonusBalance), 
+                toFixedSafe(user.totalInvested), 
+                toFixedSafe(user.totalWithdrawn)
             );
             // --- END OF FIX ---
             await bot.sendMessage(chatId, text, {
@@ -110,7 +119,7 @@ const handleMessage = async (bot, msg, user) => {
             response += ` ├ Level 2: ${counts.l2}\n`;
             response += ` └ Level 3: ${counts.l3}\n\n`;
             response += `<b>${__("referral.earnings_title")}</b>\n`;
-            response += `Total earned: ${user.referralEarnings.toFixed(2)} USDT`;
+            response += `Total earned: ${toFixedSafe(user.referralEarnings)} USDT`;
 
             await bot.sendMessage(chatId, response, { parse_mode: 'HTML' });
         }
