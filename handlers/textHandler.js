@@ -53,7 +53,11 @@ const handleTextInput = async (bot, msg, user, __) => {
                 user.stateContext = {};
                 await user.save({ transaction: t });
                 await t.commit();
-                handleReferralBonus(user.referrerId, amount, user.id); // No need to pass `__` here
+                
+                // --- FIX: Pass the `__` function to the handler ---
+                // (It's okay if this handler doesn't use it, but good practice)
+                handleReferralBonus(user.referrerId, amount, user.id, __); 
+                // --- END OF FIX ---
                 
                 const planName = __(`plans.plan_${plan.id.split('_')[1]}_button`);
                 await bot.sendMessage(chatId, __("plans.invest_success", toFixedSafe(amount), planName, plan.hours));
@@ -73,10 +77,13 @@ const handleTextInput = async (bot, msg, user, __) => {
             const invoice = await generateDepositInvoice(user, amount);
             
             if (invoice && invoice.invoice_url) {
+                
+                // --- FIX: Use `amount` (from user) not `invoice.price_amount` (from API) ---
+                // This ensures the amount is what the user typed.
                 await Transaction.create({
                     user: user.id,
                     type: 'deposit',
-                    amount: invoice.price_amount,
+                    amount: amount, // Use the user's typed amount
                     status: 'pending',
                     txId: invoice.order_id
                 });
@@ -84,7 +91,10 @@ const handleTextInput = async (bot, msg, user, __) => {
                 user.state = 'none';
                 await user.save();
 
-                const text = __("deposit.invoice_created", toFixedSafe(invoice.price_amount));
+                // --- FIX: Use `amount` (from user) not `invoice.price_amount` (from API) ---
+                const text = __("deposit.invoice_created", toFixedSafe(amount));
+                // --- END OF FIX ---
+
                 await bot.sendMessage(chatId, text, { 
                     parse_mode: 'HTML',
                     reply_markup: {
@@ -198,9 +208,13 @@ const handleTextInput = async (bot, msg, user, __) => {
     
     // Send main menu if state was reset
     if (user.state === 'none') {
-         await bot.sendMessage(chatId, __("main_menu_title", from.first_name), {
-            reply_markup: getMainMenuKeyboard(user)
+        
+        // --- FIX: Pass `__` to getMainMenuKeyboard ---
+        // And use `msg.from.first_name` instead of `from.first_name`
+        await bot.sendMessage(chatId, __("main_menu_title", msg.from.first_name), {
+            reply_markup: getMainMenuKeyboard(user, __)
         });
+        // --- END OF FIX ---
     }
 };
 
