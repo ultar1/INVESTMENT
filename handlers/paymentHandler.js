@@ -13,22 +13,19 @@ const NOWPAYMENTS_API_URL = "https://api.nowpayments.io/v1";
 
 /**
  * Creates a BEP20-ONLY deposit invoice
- * @param {object} user - The user object
- * @param {number} amount - The amount in USD
  */
 const generateDepositInvoice = async (user, amount) => {
     
-    // --- THIS IS THE FIX ---
-    // We are now hardcoding the pay_currency to 'USDTBSC',
-    // which is the correct API code for USDT on BEP20.
     const body = {
-        price_amount: amount,
+        // --- THIS IS THE FIX ---
+        // Send the amount formatted as a string with 2 decimal places.
+        price_amount: amount.toFixed(2),
+        // --- END OF FIX ---
         price_currency: 'usd',
-        pay_currency: 'USDTBSC', // <-- The correct code
+        pay_currency: 'USDTBSC',
         order_id: `user_${user.id}_${Date.now()}`,
         ipn_callback_url: `${WEBHOOK_DOMAIN}/payment-ipn`
     };
-    // --- END OF FIX ---
 
     try {
         const response = await fetch(`${NOWPAYMENTS_API_URL}/payment`, {
@@ -47,7 +44,6 @@ const generateDepositInvoice = async (user, amount) => {
             return null;
         }
         
-        // Return the full payment object
         return payment;
 
     } catch (error) {
@@ -58,7 +54,6 @@ const generateDepositInvoice = async (user, amount) => {
 
 /**
  * Verifies the IPN signature from NowPayments.
- * (This function is unchanged)
  */
 function verifyIPN(body, signature, secret) {
     try {
@@ -79,11 +74,9 @@ function verifyIPN(body, signature, secret) {
 
 /**
  * Handles incoming IPN webhooks from NowPayments
- * (This function is unchanged)
  */
 const handleNowPaymentsIPN = async (req, res) => {
     
-    // 1. Verify the IPN
     const signature = req.headers['x-nowpayments-sig'];
     if (!signature) {
         console.warn("IPN received with no signature.");
@@ -101,10 +94,8 @@ const handleNowPaymentsIPN = async (req, res) => {
         return res.status(500).send("Verification error.");
     }
     
-    // 2. Process the IPN (Signature is valid)
     const { payment_id, payment_status, outcome_amount, type, id } = req.body;
     
-    // --- Handle DEPOSIT confirmation ---
     if (type === 'payment' && payment_status === 'finished') {
         const tx = await Transaction.findOne({ where: { txId: payment_id } });
         if (!tx || tx.status !== 'pending') {
@@ -145,7 +136,6 @@ const handleNowPaymentsIPN = async (req, res) => {
         }
     }
     
-    // --- Handle WITHDRAWAL confirmation ---
     if (type === 'payout' && (payment_status === 'finished' || payment_status === 'failed')) {
         const tx = await Transaction.findOne({ where: { txId: id } });
         if (!tx || tx.status !== 'pending') {
