@@ -17,15 +17,15 @@ function cleanEnvVar(variable) {
     return variable.trim().replace(/^,|,$/g, '');
 }
 
-// --- NEW: Welcome Bonus ---
+// --- Welcome Bonus ---
 const WELCOME_BONUS = 5;
 
-// --- Investment Plans (Minimums Updated) ---
+// --- Investment Plans (UPDATED) ---
 const PLANS = {
-    plan_1: { id: 'plan_1', hours: 24, percent: 15, min: 10, max: 1000000 },
-    plan_2: { id: 'plan_2', hours: 72, percent: 20, min: 10, max: 1000000 },
-    plan_3: { id: 'plan_3', hours: 168, percent: 27, min: 10, max: 1000000 },
-    plan_4: { id: 'plan_4', hours: 720, percent: 32, min: 10, max: 1000000 }
+    plan_1: { id: 'plan_1', hours: 24, percent: 5, min: 5, max: 50 },
+    plan_2: { id: 'plan_2', hours: 72, percent: 15, min: 10, max: 200 },
+    plan_3: { id: 'plan_3', hours: 168, percent: 20, min: 10, max: 1000 },
+    plan_4: { id: 'plan_4', hours: 720, percent: 30, min: 10, max: 10000 }
 };
 
 // --- Referral Settings ---
@@ -35,9 +35,10 @@ const REFERRAL_LEVELS = {
     3: 0.05  // 5%
 };
 
-// --- Bot Limits (Minimums Updated) ---
+// --- Bot Limits (UPDATED) ---
 const MIN_WITHDRAWAL = 10;
-const MIN_DEPOSIT = 10; // Updated from 6 to 10
+const MIN_DEPOSIT = 10; // Min deposit is 10
+// Min investment is 5 (from Plan 1)
 
 // --- Main Configuration Exports ---
 module.exports = {
@@ -66,5 +67,5 @@ module.exports = {
     REFERRAL_LEVELS,
     MIN_WITHDRAWAL,
     MIN_DEPOSIT,
-    WELCOME_BONUS // Export the new bonus
+    WELCOME_BONUS
 };
