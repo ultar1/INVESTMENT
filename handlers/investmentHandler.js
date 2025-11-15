@@ -1,15 +1,18 @@
 const { User, Investment, Transaction, sequelize } = require('../models');
 const { Op } = require('sequelize');
 const { REFERRAL_LEVELS } = require('../config');
+const i18n = require('../services/i18n'); // Import i18n
 
 // Pays out referral bonuses up to 3 levels
-const handleReferralBonus = async (referrerId, investmentAmount, fromUserId) => {
+// --- THIS IS THE FIX ---
+// Accept `__` (language function) as an argument
+const handleReferralBonus = async (referrerId, investmentAmount, fromUserId, __) => {
+// --- END OF FIX ---
     try {
         if (!referrerId) return; // No referrer
 
         let currentReferrerId = referrerId;
-        const fromUser = await User.findByPk(fromUserId); // For logging
-
+        
         for (let level = 1; level <= 3; level++) {
             if (!currentReferrerId) break; 
             
@@ -21,11 +24,10 @@ const handleReferralBonus = async (referrerId, investmentAmount, fromUserId) => 
             
             const bonusAmount = investmentAmount * bonusPercent;
             
-            // Use a transaction for safety
             const t = await sequelize.transaction();
             try {
-                referrer.balance += bonusAmount;
-                referrer.referralEarnings += bonusAmount;
+                referrer.mainBalance = (referrer.mainBalance || 0) + bonusAmount;
+                referrer.referralEarnings = (referrer.referralEarnings || 0) + bonusAmount;
                 await referrer.save({ transaction: t });
                 
                 await Transaction.create({
@@ -43,7 +45,6 @@ const handleReferralBonus = async (referrerId, investmentAmount, fromUserId) => 
                 console.error(`Failed to pay L${level} bonus to user ${referrer.id}`, e);
             }
             
-            // Move to the next level up
             currentReferrerId = referrer.referrerId;
         }
 
@@ -53,7 +54,10 @@ const handleReferralBonus = async (referrerId, investmentAmount, fromUserId) => 
 };
 
 // Finds and processes all completed investments for a user
-const processCompletedInvestments = async (userId) => {
+// --- THIS IS THE FIX ---
+// Accept `bot` and `__` (language function) as arguments
+const processCompletedInvestments = async (userId, __) => {
+// --- END OF FIX ---
     try {
         const completed = await Investment.findAll({
             where: {
@@ -70,7 +74,6 @@ const processCompletedInvestments = async (userId) => {
 
         let totalPayout = 0;
 
-        // Use a transaction
         const t = await sequelize.transaction();
         try {
             for (const inv of completed) {
@@ -88,10 +91,19 @@ const processCompletedInvestments = async (userId) => {
                 }, { transaction: t });
             }
             
-            user.balance += totalPayout;
+            user.mainBalance = (user.mainBalance || 0) + totalPayout;
             await user.save({ transaction: t });
             
             await t.commit();
+            
+            // --- We can notify the user here if we want ---
+            // Example:
+            // const bot = new (require('node-telegram-bot-api'))(require('../config').BOT_TOKEN);
+            // i18n.setLocale(user.language);
+            // const notify__ = i18n.__;
+            // await bot.sendMessage(user.telegramId, notify__("investment_completed_message", totalPayout.toFixed(2)));
+            // (You would need to add "investment_completed_message" to locales)
+            
         } catch (e) {
             await t.rollback();
             console.error(`Failed to process completed investments for user ${userId}`, e);
