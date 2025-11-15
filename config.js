@@ -17,12 +17,15 @@ function cleanEnvVar(variable) {
     return variable.trim().replace(/^,|,$/g, '');
 }
 
-// --- Investment Plans ---
+// --- NEW: Welcome Bonus ---
+const WELCOME_BONUS = 5;
+
+// --- Investment Plans (Minimums Updated) ---
 const PLANS = {
-    plan_1: { id: 'plan_1', hours: 24, percent: 15, min: 5, max: 1000000 },
-    plan_2: { id: 'plan_2', hours: 72, percent: 20, min: 5, max: 1000000 },
-    plan_3: { id: 'plan_3', hours: 168, percent: 27, min: 5, max: 1000000 },
-    plan_4: { id: 'plan_4', hours: 720, percent: 32, min: 5, max: 1000000 }
+    plan_1: { id: 'plan_1', hours: 24, percent: 15, min: 10, max: 1000000 },
+    plan_2: { id: 'plan_2', hours: 72, percent: 20, min: 10, max: 1000000 },
+    plan_3: { id: 'plan_3', hours: 168, percent: 27, min: 10, max: 1000000 },
+    plan_4: { id: 'plan_4', hours: 720, percent: 32, min: 10, max: 1000000 }
 };
 
 // --- Referral Settings ---
@@ -32,12 +35,9 @@ const REFERRAL_LEVELS = {
     3: 0.05  // 5%
 };
 
-// --- Bot Limits ---
+// --- Bot Limits (Minimums Updated) ---
 const MIN_WITHDRAWAL = 10;
-// --- THIS IS THE FIX ---
-// Increased from 5 to 6 to avoid the NowPayments minimum amount error.
-const MIN_DEPOSIT = 6;
-// --- END OF FIX ---
+const MIN_DEPOSIT = 10; // Updated from 6 to 10
 
 // --- Main Configuration Exports ---
 module.exports = {
@@ -56,7 +56,7 @@ module.exports = {
 
     // --- Bot Info (From Environment) ---
     ADMIN_USERNAME: cleanEnvVar(process.env.ADMIN_USERNAME) || "FINTRUST_admin",
-    BOT_USERNAME: cleanEnvVar(process.env.BOT_USERNAME) || "Fin_Rus_Bot", // Set your bot's username
+    BOT_USERNAME: cleanEnvVar(process.env.BOT_USERNAME) || "Fin_Rus_Bot",
     
     // --- Webhook (From Environment) ---
     WEBHOOK_DOMAIN: cleanEnvVar(process.env.WEBHOOK_DOMAIN), 
@@ -65,5 +65,6 @@ module.exports = {
     PLANS,
     REFERRAL_LEVELS,
     MIN_WITHDRAWAL,
-    MIN_DEPOSIT // Exporting the new value
+    MIN_DEPOSIT,
+    WELCOME_BONUS // Export the new bonus
 };
