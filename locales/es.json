@@ -43,7 +43,8 @@
 "deposit": {
 "ask_amount": "Por favor, introduce la cantidad que deseas depositar (Mín: %s USDT):",
 "min_error": "El depósito mínimo es %s USDT.",
-"invoice_created": "Por favor, envía exactamente %s USDT (TRC20/BEP20) a la dirección de abajo:\n\n%s\n\nTu saldo se acreditará automáticamente después de la confirmación del pago. Esta factura es válida por 24 horas.",
+"ask_network": "Estás depositando %s USDT.\n\nPor favor, selecciona la red que usarás para enviar el pago:",
+"invoice_created": "Por favor, envía exactamente %s USDT (Red %s) a la dirección de abajo:\n\n%s\n\nTu saldo se acreditará automáticamente después de la confirmación del pago. Esta factura es válida por 24 horas.",
 "api_error": "No se pudo crear una factura de depósito. Por favor, inténtalo más tarde.",
 "ipn_success": "✅ ¡Tu depósito de %s USDT ha sido confirmado y añadido a tu saldo!"
 },
