@@ -1,5 +1,5 @@
 const i18n = require('../services/i18n');
-const { Op } = require('sequelize'); // Import Operator
+const { Op } = require('sequelize');
 const { ADMIN_USERNAME, BOT_USERNAME, REFERRAL_LEVELS, PLANS } = require('../config');
 const { 
     getBalanceKeyboard, 
@@ -80,16 +80,16 @@ const handleMessage = async (bot, msg, user) => {
             const counts = await getReferralCounts(user.id);
             const total_referrals = counts.l1 + counts.l2 + counts.l3;
 
-            // --- HTML FIX ---
-            // We now build an HTML string and set parse_mode to 'HTML'.
-            // This correctly handles the underscores in the referral link.
             let response = "";
             response += `<b>${__("referral.title")}</b>\n\n`;
             response += `${__("referral.link")}\n<code>${refLink}</code>\n\n`;
             response += `<b>${__("referral.conditions_title")}</b>\n`;
-            response += `Level 1: ${REFERRAL_LEVELS[1]*100}%\n`;
-            response += `Level 2: ${REFERRAL_LEVELS[2]*100}%\n`;
-            response += `Level 3: ${REFERRAL_LEVELS[3]*100}%\n\n`;
+            // --- THIS IS THE FIX ---
+            // Use .toFixed(0) to remove decimals
+            response += `Level 1: ${(REFERRAL_LEVELS[1] * 100).toFixed(0)}%\n`;
+            response += `Level 2: ${(REFERRAL_LEVELS[2] * 100).toFixed(0)}%\n`;
+            response += `Level 3: ${(REFERRAL_LEVELS[3] * 100).toFixed(0)}%\n\n`;
+            // --- END OF FIX ---
             response += `<b>${__("referral.stats_all_title")}</b>\n`;
             response += `Total referrals: ${total_referrals}\n`;
             response += ` ├ Level 1: ${counts.l1}\n`;
@@ -99,7 +99,6 @@ const handleMessage = async (bot, msg, user) => {
             response += `Total earned: ${user.referralEarnings.toFixed(2)} USDT`;
 
             await bot.sendMessage(chatId, response, { parse_mode: 'HTML' });
-            // --- END OF FIX ---
         }
         
         // ❓ FAQ & 📞 Support
