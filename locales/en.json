@@ -2,13 +2,13 @@
 "welcome": "Welcome! Please select your language.",
 "language_name": "English",
 "language_set": "Language set to %s. Welcome, %s!",
-"welcome_bonus_message": "As a new user, a welcome bonus of %.2f USDT has been added to your bonus balance! This bonus can be withdrawn after you make your first investment.",
+"welcome_bonus_message": "As a new user, a welcome bonus of %s USDT has been added to your bonus balance! This bonus can be withdrawn after you make your first investment.",
 "main_menu_title": "Main Menu\n\nWelcome back, %s!",
 "error_generic": "An error occurred. Please try again or contact support.",
 "common": {
 "back": "Back",
 "cancel": "Cancel",
-"balance": "Your Main Balance: %.2f USDT"
+"balance": "Your Main Balance: %s USDT"
 },
 "menu": {
 "make_investment": "Make Investment",
@@ -25,34 +25,34 @@
 "plan_3_button": "Plan 3: 20%% for 7 days (10 - 1000 USDT)",
 "plan_4_button": "Plan 4: 30%% for 30 days (10 - 10000 USDT)",
 "details": "Plan Details:\nProfit: %s%%\nDuration: %s hours\nLimits: %s - %s USDT\n\n%s\n\nPlease enter the amount you wish to invest (from your Main Balance):",
-"invest_success": "Success! You have invested %.2f USDT in the %s. Profits will be automatically paid out after %s hours.",
+"invest_success": "Success! You have invested %s USDT in the %s. Profits will be automatically paid out after %s hours.",
 "err_min_amount": "Minimum investment for this plan is %s USDT.",
 "err_max_amount": "Maximum investment for this plan is %s USDT.",
-"err_insufficient_funds": "Insufficient funds. Your main balance is %.2f USDT.",
+"err_insufficient_funds": "Insufficient funds. Your main balance is %s USDT.",
 "err_invalid_amount": "Please enter a valid number."
 },
 "investments": {
 "title": "My Running Investments",
 "no_investments": "You have no active investments.\n\nClick the button below to make your first one!",
-"investment_entry": "Plan: %s%% for %s hours\nAmount: %.2f USDT\nProfit: %.2f USDT\nMatures in: %s"
+"investment_entry": "Plan: %s%% for %s hours\nAmount: %s USDT\nProfit: %s USDT\nMatures in: %s"
 },
 "balance": {
-"title": "My Balance\n\nMain Balance: %.2f USDT\nBonus Balance: %.2f USDT\n\nTotal Invested: %.2f USDT\nTotal Withdrawn: %.2f USDT",
+"title": "My Balance\n\nMain Balance: %s USDT\nBonus Balance: %s USDT\n\nTotal Invested: %s USDT\nTotal Withdrawn: %s USDT",
 "deposit": "Deposit",
 "withdraw": "Withdraw",
 "transactions": "Transaction History"
 },
 "deposit": {
-"ask_amount": "Please enter the amount you wish to deposit (Min: 10 USDT):",
+"ask_amount": "Please enter the amount you wish to deposit (Min: %s USDT):",
 "min_error": "Minimum deposit is 10 USDT.",
-"invoice_created": "<b>BEP20 Invoice Created</b>\n\nAmount: <b>$%.2f USD</b>\n\nPlease click the button below to pay with USDT (BEP20).\n\n<i>Your balance will be credited automatically once the network confirms the transaction.</i>",
+"invoice_created": "<b>BEP20 Invoice Created</b>\n\nAmount: <b>$%s USD</b>\n\nPlease click the button below to pay with USDT (BEP20).\n\n<i>Your balance will be credited automatically once the network confirms the transaction.</i>",
 "pay_button": "Click to Pay (BEP20 Only)",
 "api_error": "Could not create a deposit invoice. Please try again later.",
-"ipn_success": "Your deposit of %.2f USDT has been confirmed and added to your main balance!"
+"ipn_success": "Your deposit of %s USDT has been confirmed and added to your main balance!"
 },
 "withdraw": {
-"min_error": "Minimum withdrawal is %.2f USDT.",
-"insufficient_funds": "Insufficient funds. You only have %.2f USDT in your main balance to withdraw.",
+"min_error": "Minimum withdrawal is %s USDT.",
+"insufficient_funds": "Insufficient funds. You only have %s USDT in your main balance to withdraw.",
 "ask_wallet": "Please enter your USDT (TRC20 or BEP20) wallet address:",
 "ask_network": "Is this a TRC20 (Tron) or BEP20 (BSC) address?",
 "wallet_set_success": "Wallet address set to: %s (%s)\n\nNow, please enter the amount you wish to withdraw (Min: %s USDT):",
@@ -60,17 +60,17 @@
 "request_success": "Your withdrawal request for %.2f USDT has been submitted and is pending manual review. This may take up to 12 hours.",
 "request_failed": "Withdrawal Error: %s. Please contact support if this persists.",
 "invalid_wallet": "Invalid wallet address. Please try again.",
-"notify_admin": "New withdrawal request:\n\nUser: %s (%s)\nAmount: %.2f USDT\nWallet: %s (%s)\n\nTransaction ID: %s",
+"notify_admin": "New withdrawal request:\n\nUser: %s (%s)\nAmount: %s USDT\nWallet: %s (%s)\n\nTransaction ID: %s",
 "admin_approve": "Approve",
 "admin_reject": "Reject",
-"notify_user_approved": "Your withdrawal request for %.2f USDT has been approved and processed.",
-"notify_user_rejected": "Your withdrawal request for %.2f USDT has been rejected. The amount has been returned to your main balance.",
-"bonus_unlocked": "Your %.2f USDT bonus has been unlocked and added to your main balance! It is now available for withdrawal."
+"notify_user_approved": "Your withdrawal request for %s USDT has been approved and processed.",
+"notify_user_rejected": "Your withdrawal request for %s USDT has been rejected. The amount has been returned to your main balance.",
+"bonus_unlocked": "Your %s USDT bonus has been unlocked and added to your main balance! It is now available for withdrawal."
 },
 "transactions": {
 "title": "Transaction History",
 "no_transactions": "You have no transactions yet.",
-"entry": "%s | %s | %.2f USDT | Status: %s"
+"entry": "%s | %s | %s USDT | Status: %s"
 },
 "referral": {
 "title": "Referral Program",
@@ -90,7 +90,7 @@
 },
 "action_canceled": "Action canceled.",
 "admin": {
-"add_balance_user": "An admin has added %.2f USDT to your main balance.\nYour new main balance is %.2f USDT.",
-"remove_balance_user": "An admin has removed %.2f USDT from your main balance.\nYour new main balance is %.2f USDT."
+"add_balance_user": "An admin has added %s USDT to your main balance.\nYour new main balance is %s USDT.",
+"remove_balance_user": "An admin has removed %s USDT from your main balance.\nYour new main balance is %s USDT."
 }
 }
