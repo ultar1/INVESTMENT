@@ -13,8 +13,17 @@ const NOWPAYMENTS_API_URL = "https://api.nowpayments.io/v1";
 
 /**
  * Creates a deposit invoice via NowPayments API
+ * @param {object} user - The user object
+ * @param {number} amount - The amount in USD
+ * @param {string} network - The network ('trc20' or 'bep20')
  */
-const generateDepositInvoice = async (user, amount) => {
+const generateDepositInvoice = async (user, amount, network) => {
+    
+    // --- THIS IS THE FIX ---
+    // Use the correct API code based on the network
+    const pay_currency = network === 'trc20' ? 'usdttrc20' : 'usdtbep20';
+    // --- END OF FIX ---
+
     try {
         const response = await fetch(`${NOWPAYMENTS_API_URL}/payment`, {
             method: 'POST',
@@ -25,7 +34,7 @@ const generateDepositInvoice = async (user, amount) => {
             body: JSON.stringify({
                 price_amount: amount,
                 price_currency: 'usd',
-                pay_currency: 'usdt.trc20', // Defaulting to TRC20
+                pay_currency: pay_currency, // Use the corrected variable
                 order_id: `user_${user.id}_${Date.now()}`,
                 ipn_callback_url: `${WEBHOOK_DOMAIN}/payment-ipn`
             })
@@ -48,7 +57,6 @@ const generateDepositInvoice = async (user, amount) => {
 
 /**
  * Verifies the IPN signature from NowPayments.
- * This replaces the npm package's function.
  */
 function verifyIPN(body, signature, secret) {
     try {
