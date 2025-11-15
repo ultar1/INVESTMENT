@@ -17,21 +17,18 @@ async function editOrSend(bot, chatId, msgId, text, options) {
     try {
         await bot.editMessageText(text, { chat_id: chatId, message_id: msgId, ...options });
     } catch (error) {
+        // If message is not modified or deleted, send a new one
         await bot.sendMessage(chatId, text, options);
     }
 }
 
-// --- THIS IS THE FIX ---
 // Accept `user` and `__` (language function) as arguments
 const handleCallback = async (bot, callbackQuery, user, __) => {
-// --- END OF FIX ---
     const msg = callbackQuery.message;
     const chatId = msg.chat.id;
     const msgId = msg.message_id;
     const data = callbackQuery.data;
     const from = callbackQuery.from;
-
-    // const user = await User.findOne({ where: { telegramId: from.id } }); // <-- REMOVED! We get it from index.js
     
     if (!user) return bot.answerCallbackQuery(callbackQuery.id);
 
@@ -56,11 +53,9 @@ const handleCallback = async (bot, callbackQuery, user, __) => {
         }
         
         const txUser = tx.User;
-        // --- THIS IS THE FIX ---
         // Set locale to the *user's* language before sending notification
         i18n.setLocale(txUser.language);
         const admin__ = i18n.__; // Create a new `__` for the *transaction user*
-        // --- END OF FIX ---
         
         const t = await sequelize.transaction();
         try {
@@ -94,8 +89,6 @@ const handleCallback = async (bot, callbackQuery, user, __) => {
     }
     
     // --- End of Admin Logic ---
-
-    // const __ = i18n.__; // <-- REMOVED! We use the one passed from index.js
 
     try {
         // --- Language Selection ---
@@ -243,7 +236,10 @@ const handleCallback = async (bot, callbackQuery, user, __) => {
             await user.save();
             
             const minWithdrawalText = toFixedSafe(MIN_WITHDRAWAL);
-S            const text = __("withdraw.wallet_set_success", user.walletAddress, network.toUpperCase(), minWithdrawalText);
+            // --- THIS IS THE FIX ---
+            // Removed the stray 'S'
+            const text = __("withdraw.wallet_set_success", user.walletAddress, network.toUpperCase(), minWithdrawalText);
+            // --- END OF FIX ---
             await editOrSend(bot, chatId, msgId, text, {
                 reply_markup: getCancelKeyboard(user)
             });
