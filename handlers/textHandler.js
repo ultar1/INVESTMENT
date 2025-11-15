@@ -10,6 +10,11 @@ const { PLANS, MIN_WITHDRAWAL, MIN_DEPOSIT, ADMIN_CHAT_ID, WELCOME_BONUS } = req
 const { handleReferralBonus } = require('./investmentHandler');
 const { generateDepositInvoice } = require('./paymentHandler');
 
+// --- THIS IS THE FIX ---
+// Safety function to prevent .toFixed crash
+const toFixedSafe = (num, digits = 2) => (typeof num === 'number' ? num : 0).toFixed(digits);
+// --- END OF FIX ---
+
 // Basic wallet validation
 function isValidWallet(address) {
     return (address.startsWith('T') && address.length > 30) || (address.startsWith('0x') && address.length === 42);
@@ -28,8 +33,10 @@ const handleTextInput = async (bot, msg, user) => {
             if (isNaN(amount) || amount <= 0) return bot.sendMessage(chatId, __("plans.err_invalid_amount"), { reply_markup: getCancelKeyboard(user) });
             if (amount < plan.min) return bot.sendMessage(chatId, __("plans.err_min_amount", plan.min), { reply_markup: getCancelKeyboard(user) });
             if (amount > plan.max) return bot.sendMessage(chatId, __("plans.err_max_amount", plan.max), { reply_markup: getCancelKeyboard(user) });
-            if (amount > user.mainBalance) {
-                return bot.sendMessage(chatId, __("plans.err_insufficient_funds", user.mainBalance), { reply_markup: getCancelKeyboard(user) });
+            
+            const mainBalance = user.mainBalance || 0;
+            if (amount > mainBalance) {
+                return bot.sendMessage(chatId, __("plans.err_insufficient_funds", toFixedSafe(mainBalance)), { reply_markup: getCancelKeyboard(user) });
             }
 
             const t = await sequelize.transaction();
@@ -42,21 +49,16 @@ const handleTextInput = async (bot, msg, user) => {
                     profitAmount: amount * (plan.percent / 100),
                     maturesAt: new Date(Date.now() + plan.hours * 60 * 60 * 1000)
                 }, { transaction: t });
-                user.mainBalance -= amount;
-                user.totalInvested += amount;
+                user.mainBalance = mainBalance - amount;
+                user.totalInvested = (user.totalInvested || 0) + amount;
                 user.state = 'none';
                 user.stateContext = {};
                 await user.save({ transaction: t });
                 await t.commit();
                 handleReferralBonus(user.referrerId, amount, user.id);
                 
-                // --- THIS IS THE FIX ---
-                // Get the plan name from the locale file
                 const planName = __(`plans.plan_${plan.id.split('_')[1]}_button`);
-                // Send the new success message with all 3 arguments
-                await bot.sendMessage(chatId, __("plans.invest_success", amount.toFixed(2), planName, plan.hours));
-                // --- END OF FIX ---
-
+                await bot.sendMessage(chatId, __("plans.invest_success", toFixedSafe(amount), planName, plan.hours));
             } catch (error) {
                 await t.rollback();
                 throw error; 
@@ -84,7 +86,7 @@ const handleTextInput = async (bot, msg, user) => {
                 user.state = 'none';
                 await user.save();
 
-                const text = __("deposit.invoice_created", invoice.price_amount);
+                const text = __("deposit.invoice_created", toFixedSafe(invoice.price_amount));
                 await bot.sendMessage(chatId, text, { 
                     parse_mode: 'HTML',
                     reply_markup: {
@@ -117,33 +119,35 @@ const handleTextInput = async (bot, msg, user) => {
         // --- 4. Awaiting Withdrawal Amount ---
         else if (user.state === 'awaiting_withdrawal_amount') {
             
-            if (user.bonusBalance > 0) {
+            const bonus = user.bonusBalance || 0;
+            if (bonus > 0) {
                 const activeInvestments = await Investment.count({
                     where: { userId: user.id, status: 'running' }
                 });
 
                 if (activeInvestments > 0) {
-                    const bonus = user.bonusBalance;
-                    user.mainBalance += bonus;
+                    user.mainBalance = (user.mainBalance || 0) + bonus;
                     user.bonusBalance = 0;
                     await user.save();
                     
-                    await bot.sendMessage(chatId, __("bonus_unlocked", bonus.toFixed(2)));
+                    await bot.sendMessage(chatId, __("bonus_unlocked", toFixedSafe(bonus)));
                 }
             }
 
             const amount = parseFloat(text);
+            const mainBalance = user.mainBalance || 0;
+            const minWithdrawalText = toFixedSafe(MIN_WITHDRAWAL);
+
             if (isNaN(amount) || amount <= 0) return bot.sendMessage(chatId, __("plans.err_invalid_amount"), { reply_markup: getCancelKeyboard(user) });
-            if (amount < MIN_WITHDRAWAL) return bot.sendMessage(chatId, __("withdraw.min_error", MIN_WITHDRAWAL), { reply_markup: getCancelKeyboard(user) });
-            
-            if (amount > user.mainBalance) {
-                return bot.sendMessage(chatId, __("withdraw.insufficient_funds", user.mainBalance), { reply_markup: getCancelKeyboard(user) });
+            if (amount < MIN_WITHDRAWAL) return bot.sendMessage(chatId, __("withdraw.min_error", minWithdrawalText), { reply_markup: getCancelKeyboard(user) });
+            if (amount > mainBalance) {
+                return bot.sendMessage(chatId, __("withdraw.insufficient_funds", toFixedSafe(mainBalance)), { reply_markup: getCancelKeyboard(user) });
             }
             
             const t = await sequelize.transaction();
             let newTx;
             try {
-                user.mainBalance -= amount;
+                user.mainBalance = mainBalance - amount;
                 user.state = 'none';
                 await user.save({ transaction: t });
                 newTx = await Transaction.create({
@@ -160,14 +164,14 @@ const handleTextInput = async (bot, msg, user) => {
                 return bot.sendMessage(chatId, __('error_generic'));
             }
 
-            await bot.sendMessage(chatId, __("withdraw.request_success", amount));
+            await bot.sendMessage(chatId, __("withdraw.request_success", toFixedSafe(amount)));
 
             if (ADMIN_CHAT_ID) {
                 try {
                     const notifyText = __("withdraw.notify_admin", 
                         user.firstName || 'N/A', 
                         user.telegramId, 
-                        amount, 
+                        toFixedSafe(amount), 
                         user.walletAddress, 
                         user.walletNetwork.toUpperCase(),
                         newTx.id
@@ -193,7 +197,7 @@ const handleTextInput = async (bot, msg, user) => {
     
     // Send main menu if state was reset
     if (user.state === 'none') {
-         await bot.sendMessage(chatId, __("main_menu_title", msg.from.first_name), {
+         await bot.sendMessage(chatId, __("main_menu_title", from.first_name), {
             reply_markup: getMainMenuKeyboard(user)
         });
     }
