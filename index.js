@@ -176,7 +176,7 @@ bot.onText(/\/add (\d+\.?\d*) (\d+)/, async (msg, match) => {
             return bot.sendMessage(chatId, `Admin: User with ID ${telegramId} not found.`);
         }
         
-        user.mainBalance += amount;
+        user.mainBalance = (user.mainBalance || 0) + amount; // Safety check
         await user.save();
 
         await bot.sendMessage(chatId, `Success: Added ${amount} USDT to ${user.firstName} (ID: ${user.telegramId}).\nNew Main Balance: ${user.mainBalance.toFixed(2)} USDT.`);
@@ -202,10 +202,11 @@ bot.onText(/\/remove (\d+\.?\d*) (\d+)/, async (msg, match) => {
             return bot.sendMessage(chatId, `Admin: User with ID ${telegramId} not found.`);
         }
 
-        if (user.mainBalance < amount) {
-            return bot.sendMessage(chatId, `Admin: Cannot remove. User ${user.firstName} only has ${user.mainBalance.toFixed(2)} USDT in main balance.`);
+        const mainBalance = user.mainBalance || 0;
+        if (mainBalance < amount) {
+            return bot.sendMessage(chatId, `Admin: Cannot remove. User ${user.firstName} only has ${mainBalance.toFixed(2)} USDT in main balance.`);
         }
-        user.mainBalance -= amount;
+        user.mainBalance = mainBalance - amount;
         await user.save();
 
         await bot.sendMessage(chatId, `Success: Removed ${amount} USDT from ${user.firstName} (ID: ${user.telegramId}).\nNew Main Balance: ${user.mainBalance.toFixed(2)} USDT.`);
