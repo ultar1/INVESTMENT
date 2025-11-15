@@ -135,7 +135,15 @@ bot.on('callback_query', async (callbackQuery) => {
 // 3. Text Messages
 bot.on('message', async (msg) => {
     const chatId = msg.chat.id;
-    if (msg.text && msg.text.startsWith('/')) return; // Handled by onText
+    // --- THIS IS THE FIX ---
+    // Do not ignore commands. Let the admin commands pass through.
+    if (msg.text && msg.text.startsWith('/')) {
+        // We only ignore /start because it has its own listener
+        if (msg.text.startsWith('/start')) {
+            return;
+        }
+    }
+    // --- END OF FIX ---
     try {
         const user = await User.findOne({ where: { telegramId: msg.from.id } });
         if (!user) {
@@ -167,9 +175,7 @@ bot.onText(/\/add (\d+\.?\d*) (\d+)/, async (msg, match) => {
             return bot.sendMessage(chatId, `Admin: User with ID ${telegramId} not found.`);
         }
         
-        // --- THIS IS THE FIX ---
-        user.mainBalance += amount; // Add to mainBalance
-        // --- END OF FIX ---
+        user.mainBalance += amount;
         await user.save();
 
         await bot.sendMessage(chatId, `Success: Added ${amount} USDT to ${user.firstName} (ID: ${user.telegramId}).\nNew Main Balance: ${user.mainBalance.toFixed(2)} USDT.`);
@@ -195,13 +201,10 @@ bot.onText(/\/remove (\d+\.?\d*) (\d+)/, async (msg, match) => {
             return bot.sendMessage(chatId, `Admin: User with ID ${telegramId} not found.`);
         }
 
-        // --- THIS IS THE FIX ---
-        // Check mainBalance
         if (user.mainBalance < amount) {
             return bot.sendMessage(chatId, `Admin: Cannot remove. User ${user.firstName} only has ${user.mainBalance.toFixed(2)} USDT in main balance.`);
         }
-        user.mainBalance -= amount; // Remove from mainBalance
-        // --- END OF FIX ---
+        user.mainBalance -= amount;
         await user.save();
 
         await bot.sendMessage(chatId, `Success: Removed ${amount} USDT from ${user.firstName} (ID: ${user.telegramId}).\nNew Main Balance: ${user.mainBalance.toFixed(2)} USDT.`);
@@ -213,7 +216,6 @@ bot.onText(/\/remove (\d+\.?\d*) (\d+)/, async (msg, match) => {
         await bot.sendMessage(chatId, "Admin: An error occurred.");
     }
 });
-// --- END OF ADMIN COMMANDS ---
 
 
 // --- Start Server and Database ---
