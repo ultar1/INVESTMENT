@@ -253,7 +253,7 @@ app.listen(PORT, async () => {
         
         // --- THIS IS THE FIX ---
         // Force a database rebuild ONE TIME to fix the schema.
-        await sequelize.sync({ force: true }); 
+        await sequelize.sync({ alter: true }); 
         console.log('All models were synchronized: FORCED REBUILD.');
         // --- END OF FIX ---
         
