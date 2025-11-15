@@ -18,13 +18,10 @@ function isValidWallet(address) {
     return (address.startsWith('T') && address.length > 30) || (address.startsWith('0x') && address.length === 42);
 }
 
-// --- THIS IS THE FIX ---
 // Accept `__` (language function) as an argument
 const handleTextInput = async (bot, msg, user, __) => {
-// --- END OF FIX ---
     const chatId = msg.chat.id;
     const text = msg.text;
-    // const __ = i18n.__; // <-- REMOVED!
 
     try {
         // --- 1. Awaiting Investment Amount ---
@@ -56,7 +53,7 @@ const handleTextInput = async (bot, msg, user, __) => {
                 user.stateContext = {};
                 await user.save({ transaction: t });
                 await t.commit();
-                handleReferralBonus(user.referrerId, amount, user.id, __); // Pass `__` for notifications
+                handleReferralBonus(user.referrerId, amount, user.id); // No need to pass `__` here
                 
                 const planName = __(`plans.plan_${plan.id.split('_')[1]}_button`);
                 await bot.sendMessage(chatId, __("plans.invest_success", toFixedSafe(amount), planName, plan.hours));
