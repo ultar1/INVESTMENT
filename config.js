@@ -17,10 +17,10 @@ function cleanEnvVar(variable) {
     return variable.trim().replace(/^,|,$/g, '');
 }
 
-// --- Welcome Bonus ---
-const WELCOME_BONUS = 5;
+// --- Welcome Bonus (UPDATED) ---
+const WELCOME_BONUS = 2;
 
-// --- Investment Plans (UPDATED) ---
+// --- Investment Plans ---
 const PLANS = {
     plan_1: { id: 'plan_1', hours: 24, percent: 5, min: 5, max: 50 },
     plan_2: { id: 'plan_2', hours: 72, percent: 15, min: 10, max: 200 },
@@ -35,10 +35,9 @@ const REFERRAL_LEVELS = {
     3: 0.05  // 5%
 };
 
-// --- Bot Limits (UPDATED) ---
+// --- Bot Limits ---
 const MIN_WITHDRAWAL = 10;
-const MIN_DEPOSIT = 10; // Min deposit is 10
-// Min investment is 5 (from Plan 1)
+const MIN_DEPOSIT = 10;
 
 // --- Main Configuration Exports ---
 module.exports = {
@@ -67,5 +66,5 @@ module.exports = {
     REFERRAL_LEVELS,
     MIN_WITHDRAWAL,
     MIN_DEPOSIT,
-    WELCOME_BONUS
+    WELCOME_BONUS // Export the new bonus
 };
