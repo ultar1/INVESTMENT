@@ -118,7 +118,7 @@ const handleMessage = async (bot, msg, user, __) => {
         // ❓ FAQ & 📞 Support
         else if (text === __('menu.faq')) {
             const faqText = `<b>${__("faq.title")}</b>\n\n${__("faq.link_text")}`;
-            await bot.sendMessage(chatId, faqText,.
+            await bot.sendMessage(chatId, faqText,
                 parse_mode: 'HTML',
                 reply_markup: {
                     inline_keyboard: [
