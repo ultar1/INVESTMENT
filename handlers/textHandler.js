@@ -3,14 +3,12 @@ const { sequelize, User, Investment, Transaction } = require('../models');
 const { 
     getMainMenuKeyboard, 
     getCancelKeyboard, 
-    getWithdrawNetworkKeyboard, // Renamed
-    getDepositNetworkKeyboard, // New
+    getWithdrawNetworkKeyboard, 
     getAdminReviewKeyboard 
 } = require('../services/keyboards');
 const { PLANS, MIN_WITHDRAWAL, MIN_DEPOSIT, ADMIN_CHAT_ID } = require('../config');
 const { handleReferralBonus } = require('./investmentHandler');
-// We no longer call generateDepositInvoice from here
-// const { generateDepositInvoice } = require('./paymentHandler'); 
+const { generateDepositInvoice } = require('./paymentHandler'); // We need this again
 
 // Basic wallet validation
 function isValidWallet(address) {
@@ -25,15 +23,14 @@ const handleTextInput = async (bot, msg, user) => {
     try {
         // --- 1. Awaiting Investment Amount ---
         if (user.state === 'awaiting_investment_amount') {
+            // (This section is unchanged)
             const amount = parseFloat(text);
             const plan = PLANS[user.stateContext.planId];
-
             if (isNaN(amount) || amount <= 0) return bot.sendMessage(chatId, __("plans.err_invalid_amount"), { reply_markup: getCancelKeyboard(user) });
             if (amount < plan.min) return bot.sendMessage(chatId, __("plans.err_min_amount", plan.min), { reply_markup: getCancelKeyboard(user) });
             if (amount > plan.max) return bot.sendMessage(chatId, __("plans.err_max_amount", plan.max), { reply_markup: getCancelKeyboard(user) });
             if (amount > user.balance) return bot.sendMessage(chatId, __("plans.err_insufficient_funds", user.balance), { reply_markup: getCancelKeyboard(user) });
 
-            // Use a transaction
             const t = await sequelize.transaction();
             try {
                 await Investment.create({
@@ -44,19 +41,14 @@ const handleTextInput = async (bot, msg, user) => {
                     profitAmount: amount * (plan.percent / 100),
                     maturesAt: new Date(Date.now() + plan.hours * 60 * 60 * 1000)
                 }, { transaction: t });
-
                 user.balance -= amount;
                 user.totalInvested += amount;
                 user.state = 'none';
                 user.stateContext = {};
                 await user.save({ transaction: t });
-                
                 await t.commit();
-                
                 handleReferralBonus(user.referrerId, amount, user.id);
-
                 await bot.sendMessage(chatId, __("plans.invest_success", amount, __(`plans.plan_${plan.id.split('_')[1]}_button`), plan.hours));
-
             } catch (error) {
                 await t.rollback();
                 throw error; 
@@ -70,41 +62,60 @@ const handleTextInput = async (bot, msg, user) => {
                 return bot.sendMessage(chatId, __("deposit.min_error", MIN_DEPOSIT), { reply_markup: getCancelKeyboard(user) });
             }
             
-            // --- NEW LOGIC ---
-            // Don't create invoice yet. Ask for network.
-            user.state = 'awaiting_deposit_network';
-            user.stateContext = { amount: amount }; // Save amount in context
-            await user.save();
+            // --- SIMPLIFIED LOGIC ---
+            // Create the generic invoice immediately.
+            // We no longer ask for a network.
+            const invoice = await generateDepositInvoice(user, amount);
             
-            // Ask user to select the network
-            await bot.sendMessage(chatId, __("deposit.ask_network", amount), {
-                reply_markup: getDepositNetworkKeyboard(user)
-            });
-            // We don't send main menu, we wait for button click
-            return; // Exit handler
+            if (invoice && invoice.invoice_url) {
+                await Transaction.create({
+                    user: user.id,
+                    type: 'deposit',
+                    amount: invoice.price_amount, // The amount in USD
+                    status: 'pending',
+                    txId: invoice.payment_id // Save NowPayments ID
+                });
+                
+                user.state = 'none';
+                await user.save();
+
+                // Send the new message with the INVOICE URL
+                const text = __("deposit.invoice_created", invoice.price_amount, invoice.invoice_url);
+                await bot.sendMessage(chatId, text, { 
+                    parse_mode: 'HTML',
+                    reply_markup: {
+                        inline_keyboard: [
+                            [{ text: __("deposit.pay_button"), url: invoice.invoice_url }],
+                            [{ text: __("common.cancel"), callback_data: "cancel_action" }]
+                        ]
+                    }
+                });
+                return; // Exit to avoid sending main menu
+            } else {
+                await bot.sendMessage(chatId, __("deposit.api_error"));
+            }
+            // --- END OF SIMPLIFIED LOGIC ---
         }
 
         // --- 3. Awaiting Wallet Address ---
         else if (user.state === 'awaiting_wallet_address') {
+            // (This section is unchanged)
             if (!isValidWallet(text)) {
                 return bot.sendMessage(chatId, __("withdraw.invalid_wallet"), { reply_markup: getCancelKeyboard(user) });
             }
-            
             user.state = 'awaiting_wallet_network';
             user.stateContext = { wallet: text };
             await user.save();
-            
             await bot.sendMessage(chatId, __("withdraw.ask_network"), {
-                reply_markup: getWithdrawNetworkKeyboard(user) // Use the withdraw keyboard
+                reply_markup: getWithdrawNetworkKeyboard(user)
             });
-            // Wait for button click
             return;
         }
         
         // --- 4. Awaiting Withdrawal Amount ---
         else if (user.state === 'awaiting_withdrawal_amount') {
+            // (This section is unchanged)
             const amount = parseFloat(text);
-
             if (isNaN(amount) || amount <= 0) return bot.sendMessage(chatId, __("plans.err_invalid_amount"), { reply_markup: getCancelKeyboard(user) });
             if (amount < MIN_WITHDRAWAL) return bot.sendMessage(chatId, __("withdraw.min_error", MIN_WITHDRAWAL), { reply_markup: getCancelKeyboard(user) });
             if (amount > user.balance) return bot.sendMessage(chatId, __("withdraw.insufficient_funds", user.balance), { reply_markup: getCancelKeyboard(user) });
@@ -115,7 +126,6 @@ const handleTextInput = async (bot, msg, user) => {
                 user.balance -= amount;
                 user.state = 'none';
                 await user.save({ transaction: t });
-
                 newTx = await Transaction.create({
                     user: user.id,
                     type: 'withdrawal',
@@ -123,9 +133,7 @@ const handleTextInput = async (bot, msg, user) => {
                     status: 'pending',
                     walletAddress: user.walletAddress
                 }, { transaction: t });
-                
                 await t.commit();
-                
             } catch (error) {
                 await t.rollback(); 
                 console.error("Withdrawal creation error:", error);
@@ -144,9 +152,7 @@ const handleTextInput = async (bot, msg, user) => {
                         user.walletNetwork.toUpperCase(),
                         newTx.id
                     );
-                    
                     const adminKeyboard = getAdminReviewKeyboard(newTx.id, __);
-                    
                     await bot.sendMessage(ADMIN_CHAT_ID, notifyText, {
                         reply_markup: adminKeyboard
                     });
@@ -160,7 +166,7 @@ const handleTextInput = async (bot, msg, user) => {
 
     } catch (error) {
         console.error("Text input handler error:", error);
-        user.state = 'none'; // Reset state on error
+        user.state = 'none';
         await user.save();
         await bot.sendMessage(chatId, __('error_generic'));
     }
