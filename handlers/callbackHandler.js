@@ -1,5 +1,5 @@
 const i18n = require('../services/i18n');
-const { sequelize, User, Transaction, Investment } = require('../models'); // Import Investment
+const { sequelize, User, Transaction, Investment } = require('../models');
 const { 
     getMainMenuKeyboard, 
     getInvestmentPlansKeyboard, 
@@ -31,11 +31,10 @@ const handleCallback = async (bot, callbackQuery) => {
 
     // --- Admin Approval Logic ---
     if (data.startsWith('admin_approve_') || data.startsWith('admin_reject_')) {
-        // (Unchanged)
+        // ... (This logic is correct and unchanged) ...
         if (!ADMIN_CHAT_ID || from.id.toString() !== ADMIN_CHAT_ID) {
             return bot.answerCallbackQuery(callbackQuery.id, "You are not authorized for this action.", true);
         }
-        // ... (rest of admin logic is unchanged) ...
         const action = data.split('_')[1];
         const txId = data.split('_')[2];
         const tx = await Transaction.findOne({ where: { id: txId }, include: User });
@@ -65,7 +64,7 @@ const handleCallback = async (bot, callbackQuery) => {
             } else if (action === 'reject') {
                 tx.status = 'failed';
                 await tx.save({ transaction: t });
-                txUser.mainBalance += tx.amount; // --- FIX: Refund mainBalance ---
+                txUser.mainBalance += tx.amount;
                 await txUser.save({ transaction: t });
                 await t.commit();
                 await bot.editMessageText(msg.text + `\n\nRejected by ${from.first_name}`, {
@@ -83,16 +82,25 @@ const handleCallback = async (bot, callbackQuery) => {
     
     // --- End of Admin Logic ---
 
+    // --- THIS IS THE LANGUAGE FIX ---
+    // Set locale *after* language change, or define `__` *inside* the if block.
+    // We will do the latter.
+    
+    // Set default locale for THIS action
     i18n.setLocale(user.language);
-    const __ = i18n.__;
+    let __ = i18n.__;
+    // --- END OF FIX ---
 
     try {
         // --- Language Selection ---
         if (data.startsWith('set_lang_')) {
-            // (Unchanged)
             user.language = data.split('_')[2];
             await user.save();
+            
+            // --- FIX: Re-define `__` with the NEW language ---
             i18n.setLocale(user.language);
+            __ = i18n.__;
+            // --- END OF FIX ---
             
             await bot.deleteMessage(chatId, msgId);
             await bot.sendMessage(chatId, __("language_set", from.first_name), {
@@ -108,7 +116,6 @@ const handleCallback = async (bot, callbackQuery) => {
 
         // --- Back to Main Menu ---
         else if (data === 'back_to_main') {
-            // (Unchanged)
             user.state = 'none';
             await user.save();
             const text = __("main_menu_title", from.first_name);
@@ -120,10 +127,7 @@ const handleCallback = async (bot, callbackQuery) => {
         
         // --- Show Investment Plans ---
         else if (data === 'show_invest_plans') {
-             // --- THIS IS THE FIX ---
-             // Show mainBalance, not bonusBalance
              const text = __("plans.title") + "\n\n" + __("common.balance", user.mainBalance);
-             // --- END OF FIX ---
              await editOrSend(bot, chatId, msgId, text, {
                 reply_markup: getInvestmentPlansKeyboard(user)
             });
@@ -131,7 +135,6 @@ const handleCallback = async (bot, callbackQuery) => {
 
         // --- Select Investment Plan ---
         else if (data.startsWith('invest_plan_')) {
-            // (Unchanged)
             const planId = data.replace('invest_', '');
             const plan = PLANS[planId];
             if (!plan) return bot.answerCallbackQuery(callbackQuery.id, "Invalid plan.");
@@ -139,12 +142,9 @@ const handleCallback = async (bot, callbackQuery) => {
             user.stateContext = { planId: plan.id };
             await user.save();
             
-            // --- THIS IS THE FIX ---
-            // Show mainBalance, not bonusBalance
             const text = __("plans.details", 
                 plan.percent, plan.hours, plan.min, plan.max, __("common.balance", user.mainBalance)
             );
-            // --- END OF FIX ---
             await editOrSend(bot, chatId, msgId, text, {
                 reply_markup: getCancelKeyboard(user)
             });
@@ -152,7 +152,6 @@ const handleCallback = async (bot, callbackQuery) => {
 
         // --- Cancel Action ---
         else if (data === 'cancel_action') {
-            // (Unchanged)
             user.state = 'none';
             user.stateContext = {};
             await user.save();
@@ -164,7 +163,6 @@ const handleCallback = async (bot, callbackQuery) => {
 
         // --- Deposit (Step 1) ---
         else if (data === 'deposit') {
-            // (Unchanged)
             user.state = 'awaiting_deposit_amount';
             await user.save();
             await editOrSend(bot, chatId, msgId, __("deposit.ask_amount", MIN_DEPOSIT), { 
@@ -175,8 +173,6 @@ const handleCallback = async (bot, callbackQuery) => {
         // --- Withdraw (Step 1) ---
         else if (data === 'withdraw') {
             
-            // --- THIS IS THE FIX: UNLOCK BONUS ---
-            // Check if user has a bonus and an active investment
             if (user.bonusBalance > 0) {
                 const activeInvestments = await Investment.count({
                     where: { userId: user.id, status: 'running' }
@@ -188,13 +184,10 @@ const handleCallback = async (bot, callbackQuery) => {
                     user.bonusBalance = 0;
                     await user.save();
                     
-                    // Notify user their bonus is unlocked
                     await bot.sendMessage(chatId, __("bonus_unlocked", bonus.toFixed(2)));
                 }
             }
-            // --- END OF FIX ---
 
-            // Check mainBalance for withdrawal
             if (user.mainBalance < MIN_WITHDRAWAL) { 
                 return bot.answerCallbackQuery(callbackQuery.id, __("withdraw.min_error", MIN_WITHDRAWAL), true);
             }
@@ -207,7 +200,6 @@ const handleCallback = async (bot, callbackQuery) => {
             } else {
                 user.state = 'awaiting_withdrawal_amount';
                 await user.save();
-                // Show mainBalance
                 const text = __("withdraw.ask_amount", 
                     user.walletAddress, user.walletNetwork.toUpperCase(), __("common.balance", user.mainBalance), MIN_WITHDRAWAL
                 );
@@ -219,7 +211,6 @@ const handleCallback = async (bot, callbackQuery) => {
 
         // --- Set Withdraw Network (Step 2.5) ---
         else if (data.startsWith('set_network_')) {
-            // (Unchanged)
             if (user.state !== 'awaiting_wallet_network') {
                  return bot.answerCallbackQuery(callbackQuery.id, "This request has expired.", true);
             }
@@ -240,7 +231,6 @@ const handleCallback = async (bot, callbackQuery) => {
         
         // --- Transaction History ---
         else if (data === 'transactions') {
-            // (Unchanged)
             const txs = await Transaction.findAll({ 
                 where: { userId: user.id }, 
                 order: [['createdAt', 'DESC']], 
