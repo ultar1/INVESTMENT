@@ -34,7 +34,10 @@ const handleMessage = async (bot, msg, user) => {
     try {
         // 📈 Make Investment
         if (text === __('menu.make_investment')) {
-            const text = __("plans.title") + "\n\n" + __("common.balance", user.balance);
+            // --- THIS IS THE FIX ---
+            // Show mainBalance, not bonusBalance
+            const text = __("plans.title") + "\n\n" + __("common.balance", user.mainBalance);
+            // --- END OF FIX ---
             await bot.sendMessage(chatId, text, {
                 reply_markup: getInvestmentPlansKeyboard(user)
             });
@@ -42,6 +45,7 @@ const handleMessage = async (bot, msg, user) => {
         
         // 📊 My Investments
         else if (text === __('menu.my_investments')) {
+            // This logic is now in investmentHandler
             await processCompletedInvestments(user.id);
             
             const investments = await Investment.findAll({ 
@@ -68,7 +72,10 @@ const handleMessage = async (bot, msg, user) => {
 
         // 💰 My Balance
         else if (text === __('menu.my_balance')) {
-            const text = __("balance.title", user.balance, user.totalInvested, user.totalWithdrawn);
+            // --- THIS IS THE FIX ---
+            // Show both mainBalance and bonusBalance
+            const text = __("balance.title", user.mainBalance, user.bonusBalance, user.totalInvested, user.totalWithdrawn);
+            // --- END OF FIX ---
             await bot.sendMessage(chatId, text, {
                 reply_markup: getBalanceKeyboard(user)
             });
@@ -76,6 +83,7 @@ const handleMessage = async (bot, msg, user) => {
         
         // 👥 Referral Program
         else if (text === __('menu.referral_program')) {
+            // (Unchanged)
             const refLink = `https://t.me/${BOT_USERNAME}?start=ref_${user.telegramId}`;
             const counts = await getReferralCounts(user.id);
             const total_referrals = counts.l1 + counts.l2 + counts.l3;
@@ -98,9 +106,9 @@ const handleMessage = async (bot, msg, user) => {
             await bot.sendMessage(chatId, response, { parse_mode: 'HTML' });
         }
         
-        // ❓ FAQ
+        // ❓ FAQ & 📞 Support
         else if (text === __('menu.faq')) {
-            // --- THIS IS THE FIX ---
+            // (Unchanged)
             const faqText = `<b>${__("faq.title")}</b>\n\n${__("faq.link_text")}`;
             await bot.sendMessage(chatId, faqText, {
                 parse_mode: 'HTML',
@@ -110,11 +118,9 @@ const handleMessage = async (bot, msg, user) => {
                     ]
                 }
             });
-            // --- END OF FIX ---
         }
-        
-        // 📞 Support
         else if (text === __('menu.support')) {
+            // (Unchanged)
             await bot.sendMessage(chatId, __('support.title', ADMIN_USERNAME));
         }
 
