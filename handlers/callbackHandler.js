@@ -106,7 +106,9 @@ const handleCallback = async (bot, callbackQuery, user, __) => {
             });
 
             if (user.stateContext && user.stateContext.isNewUser) {
-                await bot.sendMessage(chatId, new__("welcome_bonus_message", toFixedSafe(WELCOME_BONUS)));
+                // Read the bonus from the config and format it
+                const bonusText = toFixedSafe(WELCOME_BONUS);
+                await bot.sendMessage(chatId, new__("welcome_bonus_message", bonusText));
                 user.stateContext = {};
                 await user.save();
             }
@@ -236,10 +238,7 @@ const handleCallback = async (bot, callbackQuery, user, __) => {
             await user.save();
             
             const minWithdrawalText = toFixedSafe(MIN_WITHDRAWAL);
-            // --- THIS IS THE FIX ---
-            // Removed the stray 'S'
             const text = __("withdraw.wallet_set_success", user.walletAddress, network.toUpperCase(), minWithdrawalText);
-            // --- END OF FIX ---
             await editOrSend(bot, chatId, msgId, text, {
                 reply_markup: getCancelKeyboard(user)
             });
