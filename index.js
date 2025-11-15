@@ -1,5 +1,5 @@
 const express = require('express');
-const bodyParser = require('body-parser'); // <-- THIS IS THE FIX
+const bodyParser = require('body-parser');
 const TelegramBot = require('node-telegram-bot-api');
 const { sequelize } = require('./models');
 const { PORT, BOT_TOKEN, WEBHOOK_DOMAIN, ADMIN_CHAT_ID } = require('./config');
@@ -34,7 +34,7 @@ if (WEBHOOK_DOMAIN) {
 
 // --- Initialize Express Server ---
 const app = express();
-app.use(bodyParser.json()); // This line will now work
+app.use(bodyParser.json());
 
 // --- Bot Webhook Endpoint ---
 app.post(`/bot${BOT_TOKEN}`, (req, res) => {
@@ -142,11 +142,19 @@ app.listen(PORT, async () => {
         await sequelize.authenticate();
         console.log('PostgreSQL connected successfully.');
         
-        await sequelize.sync({ alter: true }); 
-        console.log('All models were synchronized successfully.');
+        // --- THIS IS THE FIX ---
+        // We are changing 'alter: true' to 'force: true'.
+        // This will DELETE all tables and rebuild them from scratch.
+        // This will fix the 'UNIQUE' error by creating the table correctly.
+        //
+        // **IMPORTANT**: After the bot runs successfully ONCE,
+        // you should change this back to 'alter: true' or remove it
+        // to prevent data loss on every restart.
+        await sequelize.sync({ force: true }); 
+        console.log('All models were synchronized: FORCED REBUILD.');
         
     } catch (error) {
-        console.error('Unable to connect to the database:', error);
+        console.error('Unable to sync database:', error);
     }
 });
 
