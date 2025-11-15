@@ -43,8 +43,7 @@
 "deposit": {
 "ask_amount": "Veuillez saisir le montant que vous souhaitez déposer (Min : %s USDT) :",
 "min_error": "Le dépôt minimum est de %s USDT.",
-"invoice_created": "Une facture de <b>%s USDT</b> a été créée.\n\nVeuillez utiliser le bouton ci-dessous pour payer. Vous pourrez sélectionner votre crypto-monnaie préférée (BTC, USDT, etc.) sur la page de paiement.\n\nCette facture est valide 24 heures.",
-"pay_button": "Aller à la page de paiement",
+"invoice_created": "Pour déposer <b>%s USDT</b>, veuillez envoyer <b>USDT (BEP20)</b> à l'adresse suivante :\n\n%s\n\nVotre solde sera crédité automatiquement après la confirmation du paiement. Cette facture est valide 24 heures.",
 "api_error": "Impossible de créer une facture de dépôt. Veuillez réessayer plus tard.",
 "ipn_success": "Votre dépôt de %s USDT a été confirmé et ajouté à votre solde !"
 },
