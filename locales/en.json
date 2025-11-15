@@ -43,8 +43,7 @@
 "deposit": {
 "ask_amount": "Please enter the amount you wish to deposit (Min: %s USDT):",
 "min_error": "Minimum deposit is %s USDT.",
-"invoice_created": "An invoice for <b>%s USDT</b> has been created.\n\nPlease use the button below to pay. You will be able to select your preferred cryptocurrency (BTC, USDT, etc.) on the payment page.\n\nThis invoice is valid for 24 hours.",
-"pay_button": "Go to Payment Page",
+"invoice_created": "To deposit <b>%s USDT</b>, please send <b>USDT (BEP20)</b> to the following address:\n\n%s\n\nYour balance will be credited automatically after payment is confirmed. This invoice is valid for 24 hours.",
 "api_error": "Could not create a deposit invoice. Please try again later.",
 "ipn_success": "Your deposit of %s USDT has been confirmed and added to your balance!"
 },
