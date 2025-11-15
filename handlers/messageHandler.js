@@ -80,14 +80,26 @@ const handleMessage = async (bot, msg, user) => {
             const counts = await getReferralCounts(user.id);
             const total_referrals = counts.l1 + counts.l2 + counts.l3;
 
+            // --- HTML FIX ---
+            // We now build an HTML string and set parse_mode to 'HTML'.
+            // This correctly handles the underscores in the referral link.
             let response = "";
-            response += __("referral.title") + "\n\n";
-            response += __("referral.link", refLink) + "\n\n";
-            response += __("referral.conditions", REFERRAL_LEVELS[1]*100, REFERRAL_LEVELS[2]*100, REFERRAL_LEVELS[3]*100) + "\n\n";
-            response += __("referral.stats_all", total_referrals, counts.l1, counts.l2, counts.l3) + "\n\n";
-            response += __("referral.earnings", user.referralEarnings);
+            response += `<b>${__("referral.title")}</b>\n\n`;
+            response += `${__("referral.link")}\n<code>${refLink}</code>\n\n`;
+            response += `<b>${__("referral.conditions_title")}</b>\n`;
+            response += `Level 1: ${REFERRAL_LEVELS[1]*100}%\n`;
+            response += `Level 2: ${REFERRAL_LEVELS[2]*100}%\n`;
+            response += `Level 3: ${REFERRAL_LEVELS[3]*100}%\n\n`;
+            response += `<b>${__("referral.stats_all_title")}</b>\n`;
+            response += `Total referrals: ${total_referrals}\n`;
+            response += ` ├ Level 1: ${counts.l1}\n`;
+            response += ` ├ Level 2: ${counts.l2}\n`;
+            response += ` └ Level 3: ${counts.l3}\n\n`;
+            response += `<b>${__("referral.earnings_title")}</b>\n`;
+            response += `Total earned: ${user.referralEarnings.toFixed(2)} USDT`;
 
-            await bot.sendMessage(chatId, response, { parse_mode: 'Markdown' });
+            await bot.sendMessage(chatId, response, { parse_mode: 'HTML' });
+            // --- END OF FIX ---
         }
         
         // ❓ FAQ & 📞 Support
