@@ -10,8 +10,9 @@ function setLocale(user) {
 const getLanguageKeyboard = () => {
     return {
         inline_keyboard: [
-            [{ text: "🇬🇧 English", callback_data: "set_lang_en" }, { text: "🇷🇺 Русский", callback_data: "set_lang_ru" }],
-            [{ text: "🇪🇸 Español", callback_data: "set_lang_es" }, { text: "🇫🇷 Français", callback_data: "set_lang_fr" }]
+            // --- FIX: Removed flag emojis ---
+            [{ text: "English", callback_data: "set_lang_en" }, { text: "Русский", callback_data: "set_lang_ru" }],
+            [{ text: "Español", callback_data: "set_lang_es" }, { text: "Français", callback_data: "set_lang_fr" }]
         ]
     };
 };
@@ -63,9 +64,6 @@ const getWithdrawNetworkKeyboard = (user) => {
     };
 };
 
-// --- REMOVED getDepositNetworkKeyboard ---
-// It is no longer needed.
-
 const getCancelKeyboard = (user) => {
     const __ = setLocale(user).__;
     return {
@@ -112,7 +110,6 @@ module.exports = {
     getBalanceKeyboard,
     getInvestmentPlansKeyboard,
     getWithdrawNetworkKeyboard,
-    // getDepositNetworkKeyboard is removed
     getCancelKeyboard,
     getBackKeyboard,
     getMakeInvestmentButton,
