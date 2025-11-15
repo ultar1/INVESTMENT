@@ -9,6 +9,11 @@ const {
 } = require('../services/keyboards');
 const { PLANS, MIN_WITHDRAWAL, MIN_DEPOSIT, ADMIN_CHAT_ID, WELCOME_BONUS } = require('../config');
 
+// --- THIS IS THE FIX ---
+// Safety function to prevent .toFixed crash
+const toFixedSafe = (num, digits = 2) => (typeof num === 'number' ? num : 0).toFixed(digits);
+// --- END OF FIX ---
+
 // Helper to edit message
 async function editOrSend(bot, chatId, msgId, text, options) {
     try {
@@ -32,12 +37,9 @@ const handleCallback = async (bot, callbackQuery) => {
     // --- Admin Approval Logic ---
     if (data.startsWith('admin_approve_') || data.startsWith('admin_reject_')) {
         
-        // --- THIS IS THE FIX for "Not Authorized" ---
-        // We compare strings to strings
         if (!ADMIN_CHAT_ID || from.id.toString() !== ADMIN_CHAT_ID.toString()) {
             return bot.answerCallbackQuery(callbackQuery.id, "You are not authorized for this action.", true);
         }
-        // --- END OF FIX ---
 
         const action = data.split('_')[1];
         const txId = data.split('_')[2];
@@ -61,27 +63,23 @@ const handleCallback = async (bot, callbackQuery) => {
             if (action === 'approve') {
                 tx.status = 'completed';
                 await tx.save({ transaction: t });
-                txUser.totalWithdrawn += tx.amount;
+                txUser.totalWithdrawn = (txUser.totalWithdrawn || 0) + tx.amount;
                 await txUser.save({ transaction: t });
                 await t.commit();
                 await bot.editMessageText(msg.text + `\n\nApproved by ${from.first_name}`, {
                     chat_id: chatId, message_id: msgId, reply_markup: null
                 });
-                // --- THIS IS THE FIX for %.2f ---
-                await bot.sendMessage(txUser.telegramId, __("withdraw.notify_user_approved", tx.amount.toFixed(2)));
-                // --- END OF FIX ---
+                await bot.sendMessage(txUser.telegramId, __("withdraw.notify_user_approved", toFixedSafe(tx.amount)));
             } else if (action === 'reject') {
                 tx.status = 'failed';
                 await tx.save({ transaction: t });
-                txUser.mainBalance += tx.amount;
+                txUser.mainBalance = (txUser.mainBalance || 0) + tx.amount;
                 await txUser.save({ transaction: t });
                 await t.commit();
                 await bot.editMessageText(msg.text + `\n\nRejected by ${from.first_name}`, {
                     chat_id: chatId, message_id: msgId, reply_markup: null
                 });
-                // --- THIS IS THE FIX for %.2f ---
-                await bot.sendMessage(txUser.telegramId, __("withdraw.notify_user_rejected", tx.amount.toFixed(2)));
-                // --- END OF FIX ---
+                await bot.sendMessage(txUser.telegramId, __("withdraw.notify_user_rejected", toFixedSafe(tx.amount)));
             }
         } catch (e) {
             await t.rollback();
@@ -112,9 +110,7 @@ const handleCallback = async (bot, callbackQuery) => {
             });
 
             if (user.stateContext && user.stateContext.isNewUser) {
-                // --- THIS IS THE FIX for %.2f ---
-                await bot.sendMessage(chatId, __("welcome_bonus_message", WELCOME_BONUS.toFixed(2)));
-                // --- END OF FIX ---
+                await bot.sendMessage(chatId, __("welcome_bonus_message", toFixedSafe(WELCOME_BONUS)));
                 user.stateContext = {};
                 await user.save();
             }
@@ -133,10 +129,8 @@ const handleCallback = async (bot, callbackQuery) => {
         
         // --- Show Investment Plans ---
         else if (data === 'show_invest_plans') {
-             // --- THIS IS THE FIX for %.2f ---
-             const balanceText = user.mainBalance.toFixed(2);
+             const balanceText = toFixedSafe(user.mainBalance);
              const text = __("plans.title") + "\n\n" + __("common.balance", balanceText);
-             // --- END OF FIX ---
              await editOrSend(bot, chatId, msgId, text, {
                 reply_markup: getInvestmentPlansKeyboard(user)
             });
@@ -151,16 +145,14 @@ const handleCallback = async (bot, callbackQuery) => {
             user.stateContext = { planId: plan.id };
             await user.save();
             
-            // --- THIS IS THE FIX for %.2f ---
-            const balanceText = user.mainBalance.toFixed(2);
+            const balanceText = toFixedSafe(user.mainBalance);
             const text = __("plans.details", 
                 plan.percent, 
                 plan.hours, 
                 plan.min, 
                 plan.max, 
-                __("common.balance", balanceText) // Pass formatted balance text
+                __("common.balance", balanceText)
             );
-            // --- END OF FIX ---
             await editOrSend(bot, chatId, msgId, text, {
                 reply_markup: getCancelKeyboard(user)
             });
@@ -189,28 +181,26 @@ const handleCallback = async (bot, callbackQuery) => {
         // --- Withdraw (Step 1) ---
         else if (data === 'withdraw') {
             
-            if (user.bonusBalance > 0) {
+            const bonus = user.bonusBalance || 0;
+            if (bonus > 0) {
                 const activeInvestments = await Investment.count({
                     where: { userId: user.id, status: 'running' }
                 });
 
                 if (activeInvestments > 0) {
-                    const bonus = user.bonusBalance;
-                    user.mainBalance += bonus;
+                    user.mainBalance = (user.mainBalance || 0) + bonus;
                     user.bonusBalance = 0;
                     await user.save();
-                    // --- THIS IS THE FIX for %.2f ---
-                    await bot.sendMessage(chatId, __("bonus_unlocked", bonus.toFixed(2)));
-                    // --- END OF FIX ---
+                    
+                    await bot.sendMessage(chatId, __("bonus_unlocked", toFixedSafe(bonus)));
                 }
             }
-
-            // --- THIS IS THE FIX for toFixed crash ---
-            const minWithdrawalText = MIN_WITHDRAWAL ? MIN_WITHDRAWAL.toFixed(2) : "10.00";
-            if (user.mainBalance < MIN_WITHDRAWAL) { 
+            
+            const mainBalance = user.mainBalance || 0;
+            const minWithdrawalText = toFixedSafe(MIN_WITHDRAWAL);
+            if (mainBalance < MIN_WITHDRAWAL) { 
                 return bot.answerCallbackQuery(callbackQuery.id, __("withdraw.min_error", minWithdrawalText), true);
             }
-            // --- END OF FIX ---
 
             if (!user.walletAddress) {
                 user.state = 'awaiting_wallet_address';
@@ -221,8 +211,7 @@ const handleCallback = async (bot, callbackQuery) => {
             } else {
                 user.state = 'awaiting_withdrawal_amount';
                 await user.save();
-                // --- THIS IS THE FIX for %.2f and toFixed crash ---
-                const balanceText = user.mainBalance.toFixed(2);
+                const balanceText = toFixedSafe(user.mainBalance);
                 const networkText = user.walletNetwork ? user.walletNetwork.toUpperCase() : "N/A";
                 const text = __("withdraw.ask_amount", 
                     user.walletAddress, 
@@ -230,7 +219,6 @@ const handleCallback = async (bot, callbackQuery) => {
                     __("common.balance", balanceText),
                     minWithdrawalText
                 );
-                // --- END OF FIX ---
                 await editOrSend(bot, chatId, msgId, text, {
                     reply_markup: getCancelKeyboard(user)
                 });
@@ -251,10 +239,8 @@ const handleCallback = async (bot, callbackQuery) => {
             user.stateContext = {};
             await user.save();
             
-            // --- THIS IS THE FIX for %.2f ---
-            const minWithdrawalText = MIN_WITHDRAWAL.toFixed(2);
+            const minWithdrawalText = toFixedSafe(MIN_WITHDRAWAL);
             const text = __("withdraw.wallet_set_success", user.walletAddress, network.toUpperCase(), minWithdrawalText);
-            // --- END OF FIX ---
             await editOrSend(bot, chatId, msgId, text, {
                 reply_markup: getCancelKeyboard(user)
             });
@@ -275,9 +261,7 @@ const handleCallback = async (bot, callbackQuery) => {
             let text = __("transactions.title") + "\n\n";
             txs.forEach(tx => {
                 const date = tx.createdAt.toLocaleDateString('en-GB');
-                // --- THIS IS THE FIX for %.2f ---
-                text += __("transactions.entry", date, tx.type, tx.amount.toFixed(2), tx.status) + "\n";
-                // --- END OF FIX ---
+                text += __("transactions.entry", date, tx.type, toFixedSafe(tx.amount), tx.status) + "\n";
             });
             await editOrSend(bot, chatId, msgId, text, {
                 reply_markup: getBackKeyboard(user, "back_to_main")
