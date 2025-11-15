@@ -52,12 +52,24 @@ const getInvestmentPlansKeyboard = (user) => {
     };
 };
 
-// New keyboard to select TRC20 or BEP20
-const getNetworkKeyboard = (user) => {
+// Renamed from getNetworkKeyboard for clarity
+const getWithdrawNetworkKeyboard = (user) => {
     const __ = setLocale(user).__;
     return {
          inline_keyboard: [
             [{ text: "TRC20 (Tron)", callback_data: "set_network_trc20" }, { text: "BEP20 (BSC)", callback_data: "set_network_bep20" }],
+            [{ text: __('common.cancel'), callback_data: "cancel_action" }]
+        ]
+    };
+};
+
+// --- NEW KEYBOARD ---
+// For selecting deposit network
+const getDepositNetworkKeyboard = (user) => {
+    const __ = setLocale(user).__;
+    return {
+         inline_keyboard: [
+            [{ text: "TRC20 (Tron)", callback_data: "deposit_network_trc20" }, { text: "BEP20 (BSC)", callback_data: "deposit_network_bep20" }],
             [{ text: __('common.cancel'), callback_data: "cancel_action" }]
         ]
     };
@@ -90,9 +102,8 @@ const getMakeInvestmentButton = (user) => {
     };
 }
 
-// NEW keyboard for admin withdrawal review
+// For admin withdrawal review
 const getAdminReviewKeyboard = (transactionId, i18nInstance) => {
-    // We pass the i18nInstance (__) so it uses the correct language
     const __ = i18nInstance;
     return {
         inline_keyboard: [
@@ -109,9 +120,10 @@ module.exports = {
     getMainMenuKeyboard,
     getBalanceKeyboard,
     getInvestmentPlansKeyboard,
-    getNetworkKeyboard,
+    getWithdrawNetworkKeyboard, // Renamed
+    getDepositNetworkKeyboard, // New
     getCancelKeyboard,
     getBackKeyboard,
     getMakeInvestmentButton,
-    getAdminReviewKeyboard // NEW EXPORT
+    getAdminReviewKeyboard
 };
