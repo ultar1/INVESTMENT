@@ -1,86 +1,86 @@
 {
-"welcome": "🇪🇸 ¡Bienvenido! Por favor, selecciona tu idioma.",
-"language_set": "Idioma establecido en Español. ¡Bienvenido, %s!",
-"main_menu_title": "👤 Menú Principal\n\n¡Bienvenido de nuevo, %s!",
-"error_generic": "Ocurrió un error. Por favor, inténtalo de nuevo o contacta a soporte.",
+"welcome": "🇫🇷 Bienvenue ! Veuillez sélectionner votre langue.",
+"language_set": "Langue définie sur Français. Bienvenue, %s !",
+"main_menu_title": "👤 Menu Principal\n\nBon retour parmi nous, %s !",
+"error_generic": "Une erreur est survenue. Veuillez réessayer ou contacter le support.",
 "common": {
-"back": "⬅️ Volver",
-"cancel": "❌ Cancelar",
-"balance": "Tu saldo: %.2f USDT"
+"back": "⬅️ Retour",
+"cancel": "❌ Annuler",
+"balance": "Votre solde : %.2f USDT"
 },
 "menu": {
-"make_investment": "📈 Realizar Inversión",
-"my_investments": "📊 Mis Inversiones",
-"my_balance": "💰 Mi Saldo",
-"referral_program": "👥 Programa de Referidos",
+"make_investment": "📈 Faire un Investissement",
+"my_investments": "📊 Mes Investissements",
+"my_balance": "💰 Mon Solde",
+"referral_program": "👥 Programme de Parrainage",
 "faq": "❓ FAQ",
-"support": "📞 Soporte"
+"support": "📞 Support"
 },
 "plans": {
-"title": "📈 Elige un plan de inversión:",
-"plan_1_button": "Plan 1: 15%% por 24 horas",
-"plan_2_button": "Plan 2: 20%% por 72 horas",
-"plan_3_button": "Plan 3: 27%% por 7 días",
-"plan_4_button": "Plan 4: 32%% por 30 días",
-"details": "Detalles del Plan:\nBeneficio: %s%%\nDuración: %s horas\nLímites: %s - %s USDT\n\n%s\n\nPor favor, introduce la cantidad que deseas invertir:",
-"invest_success": "✅ ¡Éxito! Has invertido %.2f USDT en el plan %s. Vencerá en %s horas.",
-"err_min_amount": "La inversión mínima es %s USDT.",
-"err_max_amount": "La inversión máxima es %s USDT.",
-"err_insufficient_funds": "Fondos insuficientes. Tu saldo es %.2f USDT.",
-"err_invalid_amount": "Por favor, introduce un número válido."
+"title": "📈 Choisissez un plan d'investissement :",
+"plan_1_button": "Plan 1 : 15%% pendant 24 heures",
+"plan_2_button": "Plan 2 : 20%% pendant 72 heures",
+"plan_3_button": "Plan 3 : 27%% pendant 7 jours",
+"plan_4_button": "Plan 4 : 32%% pendant 30 jours",
+"details": "Détails du Plan :\nProfit : %s%%\nDurée : %s heures\nLimites : %s - %s USDT\n\n%s\n\nVeuillez saisir le montant que vous souhaitez investir :",
+"invest_success": "✅ Succès ! Vous avez investi %.2f USDT dans le plan %s. Il arrivera à échéance dans %s heures.",
+"err_min_amount": "L'investissement minimum est de %s USDT.",
+"err_max_amount": "L'investissement maximum est de %s USDT.",
+"err_insufficient_funds": "Fonds insuffisants. Votre solde est de %.2f USDT.",
+"err_invalid_amount": "Veuillez saisir un nombre valide."
 },
 "investments": {
-"title": "📊 Mis Inversiones Activas",
-"no_investments": "No tienes inversiones activas.\n\n¡Haz clic en el botón de abajo para hacer la primera!",
-"investment_entry": "Plan: %s%% por %s horas\nCantidad: %.2f USDT\nBeneficio: %.2f USDT\nVence en: %s"
+"title": "📊 Mes Investissements Actifs",
+"no_investments": "Vous n'avez aucun investissement actif.\n\nCliquez sur le bouton ci-dessous pour faire le premier !",
+"investment_entry": "Plan : %s%% pendant %s heures\nMontant : %.2f USDT\nProfit : %.2f USDT\nExpire dans : %s"
 },
 "balance": {
-"title": "💰 Mi Saldo\n\nSaldo Principal: %.2f USDT\nTotal Invertido: %.2f USDT\nTotal Retirado: %.2f USDT",
-"deposit": "➕ Depositar",
-"withdraw": "➖ Retirar",
-"transactions": "🔄 Historial de Transacciones"
+"title": "💰 Mon Solde\n\nSolde Principal : %.2f USDT\nTotal Investi : %.2f USDT\nTotal Retiré : %.2f USDT",
+"deposit": "➕ Déposer",
+"withdraw": "➖ Retirer",
+"transactions": "🔄 Historique des Transactions"
 },
 "deposit": {
-"ask_amount": "Por favor, introduce la cantidad que deseas depositar (Mín: %s USDT):",
-"min_error": "El depósito mínimo es %s USDT.",
-"ask_network": "Estás depositando %s USDT.\n\nPor favor, selecciona la red que usarás para enviar el pago:",
-"invoice_created": "Por favor, envía exactamente %s USDT (Red %s) a la dirección de abajo:\n\n%s\n\nTu saldo se acreditará automáticamente después de la confirmación del pago. Esta factura es válida por 24 horas.",
-"api_error": "No se pudo crear una factura de depósito. Por favor, inténtalo más tarde.",
-"ipn_success": "✅ ¡Tu depósito de %s USDT ha sido confirmado y añadido a tu saldo!"
+"ask_amount": "Veuillez saisir le montant que vous souhaitez déposer (Min : %s USDT) :",
+"min_error": "Le dépôt minimum est de %s USDT.",
+"ask_network": "Vous déposez %s USDT.\n\nVeuillez sélectionner le réseau que vous utiliserez pour envoyer le paiement :",
+"invoice_created": "Veuillez envoyer exactement %s USDT (Réseau %s) à l'adresse ci-dessous :\n\n%s\n\nVotre solde sera crédité automatiquement après la confirmation du paiement. Cette facture est valide 24 heures.",
+"api_error": "Impossible de créer une facture de dépôt. Veuillez réessayer plus tard.",
+"ipn_success": "✅ Votre dépôt de %s USDT a été confirmé et ajouté à votre solde !"
 },
 "withdraw": {
-"min_error": "El retiro mínimo es %.2f USDT.",
-"insufficient_funds": "Fondos insuficientes. Solo tienes %.2f USDT para retirar.",
-"ask_wallet": "Por favor, introduce tu dirección de billetera USDT (TRC20 o BEP20):",
-"ask_network": "¿Es esta una dirección TRC20 (Tron) o BEP20 (BSC)?",
-"wallet_set_success": "✅ Dirección de billetera establecida: %s (%s)\n\nAhora, introduce la cantidad que deseas retirar (Mín: %s USDT):",
-"ask_amount": "Tu billetera: %s (%s)\n%s\n\nPor favor, introduce la cantidad a retirar (Mín: %s USDT):",
-"request_success": "✅ Tu solicitud de retiro de %.2f USDT ha sido enviada y está pendiente de revisión manual. Esto puede tardar hasta 12 horas.",
-"request_failed": "❌ Error de Retiro: %s. Por favor, contacta a soporte si esto persiste.",
-"invalid_wallet": "Dirección de billetera inválida. Por favor, inténtalo de nuevo.",
-"notify_admin": "Nueva solicitud de retiro:\n\nUsuario: %s (%s)\nCantidad: %.2f USDT\nBilletera: %s (%s)\n\nID de Transacción: %s",
-"admin_approve": "✅ Aprobar",
-"admin_reject": "❌ Rechazar",
-"notify_user_approved": "✅ Tu solicitud de retiro de %.2f USDT ha sido aprobada y procesada.",
-"notify_user_rejected": "❌ Tu solicitud de retiro de %.2f USDT ha sido rechazada. La cantidad ha sido devuelta a tu saldo."
+"min_error": "Le retrait minimum est de %.2f USDT.",
+"insufficient_funds": "Fonds insuffisants. Vous n'avez que %.2f USDT à retirer.",
+"ask_wallet": "Veuillez saisir l'adresse de votre portefeuille USDT (TRC20 ou BEP20) :",
+"ask_network": "Est-ce une adresse TRC20 (Tron) ou BEP20 (BSC) ?",
+"wallet_set_success": "✅ Adresse du portefeuille définie sur : %s (%s)\n\nMaintenant, veuillez saisir le montant que vous souhaitez retirer (Min : %s USDT) :",
+"ask_amount": "Votre portefeuille : %s (%s)\n%s\n\nVeuillez saisir le montant à retirer (Min : %s USDT) :",
+"request_success": "✅ Votre demande de retrait de %.2f USDT a été soumise et est en attente d'examen manuel. Cela peut prendre jusqu'à 12 heures.",
+"request_failed": "❌ Erreur de Retrait : %s. Veuillez contacter le support si cela persiste.",
+"invalid_wallet": "Adresse de portefeuille invalide. Veuillez réessayer.",
+"notify_admin": "Nouvelle demande de retrait :\n\nUtilisateur : %s (%s)\nMontant : %.2f USDT\nPortefeuille : %s (%s)\n\nID de Transaction : %s",
+"admin_approve": "✅ Approuver",
+"admin_reject": "❌ Rejeter",
+"notify_user_approved": "✅ Votre demande de retrait de %.2f USDT a été approuvée et traitée.",
+"notify_user_rejected": "❌ Votre demande de retrait de %.2f USDT a été rejetée. Le montant a été retourné sur votre solde."
 },
 "transactions": {
-"title": "🔄 Historial de Transacciones",
-"no_transactions": "Aún no tienes transacciones.",
-"entry": "%s | %s | %.2f USDT | Estado: %s"
+"title": "🔄 Historique des Transactions",
+"no_transactions": "Vous n'avez pas encore de transactions.",
+"entry": "%s | %s | %.2f USDT | Statut : %s"
 },
 "referral": {
-"title": "👥 Programa de Referidos",
-"link": "🔗 Tu enlace de referido:\n%s",
-"conditions": "💰 Condiciones del programa:\n🥇 Nivel 1: %s%% de las inversiones de referidos\n🥈 Nivel 2: %s%%\n🥉 Nivel 3: %s%%",
-"stats_all": "📊 Estadísticas de todos los tiempos:\n👥 Total de referidos: %s\n├ Nivel 1: %s\n├ Nivel 2: %s\n└ Nivel 3: %s",
-"earnings": "💎 Ganancias de referidos:\n📊 Total ganado: %.2f USDT"
+"title": "👥 Programme de Parrainage",
+"link": "🔗 Votre lien de parrainage :\n%s",
+"conditions": "💰 Conditions du programme :\n🥇 Niveau 1 : %s%% des investissements des filleuls\n🥈 Niveau 2 : %s%%\n🥉 Niveau 3 : %s%%",
+"stats_all": "📊 Statistiques globales :\n👥 Total des filleuls : %s\n├ Niveau 1 : %s\n├ Niveau 2 : %s\n└ Niveau 3 : %s",
+"earnings": "💎 Gains de parrainage :\n📊 Total gagné : %.2f USDT"
 },
 "faq": {
-"title": "❓ Preguntas Frecuentes\n\n(Admin: Añade tu FAQ aquí)"
+"title": "❓ Questions Fréquemment Posées\n\n(Admin : Ajoutez votre FAQ ici)"
 },
 "support": {
-"title": "📞 Soporte\n\nPara soporte técnico o cualquier consulta, por favor contacta a nuestro admin: @%s"
+"title": "📞 Support\n\nPour une assistance technique ou toute demande, veuillez contacter notre admin : @%s"
 },
-"action_canceled": "Acción cancelada."
+"action_canceled": "Action annulée."
 }
