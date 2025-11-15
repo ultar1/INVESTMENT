@@ -6,9 +6,9 @@ const {
     getWithdrawNetworkKeyboard, 
     getAdminReviewKeyboard 
 } = require('../services/keyboards');
-const { PLANS, MIN_WITHDRAWAL, MIN_DEPOSIT, ADMIN_CHAT_ID } = require('../config');
+const { PLANS, MIN_WITHDRAWAL, MIN_DEPOSIT, ADMIN_CHAT_ID, WELCOME_BONUS } = require('../config');
 const { handleReferralBonus } = require('./investmentHandler');
-const { generateDepositInvoice } = require('./paymentHandler'); // We need this
+const { generateDepositInvoice } = require('./paymentHandler');
 
 // Basic wallet validation
 function isValidWallet(address) {
@@ -28,7 +28,13 @@ const handleTextInput = async (bot, msg, user) => {
             if (isNaN(amount) || amount <= 0) return bot.sendMessage(chatId, __("plans.err_invalid_amount"), { reply_markup: getCancelKeyboard(user) });
             if (amount < plan.min) return bot.sendMessage(chatId, __("plans.err_min_amount", plan.min), { reply_markup: getCancelKeyboard(user) });
             if (amount > plan.max) return bot.sendMessage(chatId, __("plans.err_max_amount", plan.max), { reply_markup: getCancelKeyboard(user) });
-            if (amount > user.balance) return bot.sendMessage(chatId, __("plans.err_insufficient_funds", user.balance), { reply_markup: getCancelKeyboard(user) });
+            
+            // --- THIS IS THE FIX ---
+            // Check against mainBalance, not bonusBalance
+            if (amount > user.mainBalance) {
+                return bot.sendMessage(chatId, __("plans.err_insufficient_funds", user.mainBalance), { reply_markup: getCancelKeyboard(user) });
+            }
+            // --- END OF FIX ---
 
             const t = await sequelize.transaction();
             try {
@@ -40,7 +46,10 @@ const handleTextInput = async (bot, msg, user) => {
                     profitAmount: amount * (plan.percent / 100),
                     maturesAt: new Date(Date.now() + plan.hours * 60 * 60 * 1000)
                 }, { transaction: t });
-                user.balance -= amount;
+                
+                // --- THIS IS THE FIX ---
+                user.mainBalance -= amount; // Deduct from mainBalance
+                // --- END OF FIX ---
                 user.totalInvested += amount;
                 user.state = 'none';
                 user.stateContext = {};
@@ -56,29 +65,26 @@ const handleTextInput = async (bot, msg, user) => {
         
         // --- 2. Awaiting Deposit Amount ---
         else if (user.state === 'awaiting_deposit_amount') {
+            // (Unchanged logic, just for context)
             const amount = parseFloat(text);
             if (isNaN(amount) || amount < MIN_DEPOSIT) {
                 return bot.sendMessage(chatId, __("deposit.min_error", MIN_DEPOSIT), { reply_markup: getCancelKeyboard(user) });
             }
             
-            // --- NEW INVOICE LOGIC ---
-            // Create the generic invoice using the /invoice endpoint.
             const invoice = await generateDepositInvoice(user, amount);
             
             if (invoice && invoice.invoice_url) {
-                // Save the 'order_id' as our txId
                 await Transaction.create({
                     user: user.id,
                     type: 'deposit',
-                    amount: invoice.price_amount, // The amount in USD
+                    amount: invoice.price_amount,
                     status: 'pending',
-                    txId: invoice.order_id // Use order_id from invoice
+                    txId: invoice.order_id
                 });
                 
                 user.state = 'none';
                 await user.save();
 
-                // Send the new message with the INVOICE URL
                 const text = __("deposit.invoice_created", invoice.price_amount);
                 await bot.sendMessage(chatId, text, { 
                     parse_mode: 'HTML',
@@ -89,15 +95,15 @@ const handleTextInput = async (bot, msg, user) => {
                         ]
                     }
                 });
-                return; // Exit to avoid sending main menu
+                return;
             } else {
                 await bot.sendMessage(chatId, __("deposit.api_error"));
             }
-            // --- END OF NEW LOGIC ---
         }
 
         // --- 3. Awaiting Wallet Address ---
         else if (user.state === 'awaiting_wallet_address') {
+            // (Unchanged logic)
             if (!isValidWallet(text)) {
                 return bot.sendMessage(chatId, __("withdraw.invalid_wallet"), { reply_markup: getCancelKeyboard(user) });
             }
@@ -112,15 +118,39 @@ const handleTextInput = async (bot, msg, user) => {
         
         // --- 4. Awaiting Withdrawal Amount ---
         else if (user.state === 'awaiting_withdrawal_amount') {
+            
+            // --- THIS IS THE FIX: UNLOCK BONUS ---
+            // Check if user has a bonus and an active investment
+            if (user.bonusBalance > 0) {
+                const activeInvestments = await Investment.count({
+                    where: { userId: user.id, status: 'running' }
+                });
+
+                if (activeInvestments > 0) {
+                    const bonus = user.bonusBalance;
+                    user.mainBalance += bonus;
+                    user.bonusBalance = 0;
+                    await user.save();
+                    
+                    // Notify user their bonus is unlocked
+                    await bot.sendMessage(chatId, __("bonus_unlocked", bonus.toFixed(2)));
+                }
+            }
+            // --- END OF FIX ---
+
             const amount = parseFloat(text);
             if (isNaN(amount) || amount <= 0) return bot.sendMessage(chatId, __("plans.err_invalid_amount"), { reply_markup: getCancelKeyboard(user) });
             if (amount < MIN_WITHDRAWAL) return bot.sendMessage(chatId, __("withdraw.min_error", MIN_WITHDRAWAL), { reply_markup: getCancelKeyboard(user) });
-            if (amount > user.balance) return bot.sendMessage(chatId, __("withdraw.insufficient_funds", user.balance), { reply_markup: getCancelKeyboard(user) });
+            
+            // Check against mainBalance
+            if (amount > user.mainBalance) {
+                return bot.sendMessage(chatId, __("withdraw.insufficient_funds", user.mainBalance), { reply_markup: getCancelKeyboard(user) });
+            }
             
             const t = await sequelize.transaction();
             let newTx;
             try {
-                user.balance -= amount;
+                user.mainBalance -= amount; // Deduct from mainBalance
                 user.state = 'none';
                 await user.save({ transaction: t });
                 newTx = await Transaction.create({
