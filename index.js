@@ -107,6 +107,17 @@ async function notifyAdminOfActivity(from, action) {
     }
 }
 
+// --- THIS IS THE FIX: Safety function to get user and set language ---
+async function getUserAndLocale(from) {
+    const user = await User.findOne({ where: { telegramId: from.id } });
+    if (!user) return null;
+    
+    i18n.setLocale(user.language);
+    const __ = i18n.__;
+    return { user, __ };
+}
+// --- END OF FIX ---
+
 // --- Bot Listeners (Attached to the 'bot' instance) ---
 
 // 1. /start command
@@ -124,9 +135,17 @@ bot.onText(/\/start(?: (.+))?/, async (msg, match) => {
 
 // 2. Callback Queries (Button Clicks)
 bot.on('callback_query', async (callbackQuery) => {
-    notifyAdminOfActivity(callbackQuery.from, `Button: ${callbackQuery.data}`);
+    const from = callbackQuery.from;
+    notifyAdminOfActivity(from, `Button: ${callbackQuery.data}`);
+    
     try {
-        await handleCallback(bot, callbackQuery);
+        // --- THIS IS THE FIX ---
+        // Get user and language *before* calling the handler
+        const { user, __ } = await getUserAndLocale(from);
+        if (!user) return bot.answerCallbackQuery(callbackQuery.id);
+        // Pass user and language function to the handler
+        await handleCallback(bot, callbackQuery, user, __);
+        // --- END OF FIX ---
     } catch (error) {
         console.error('Callback handler error:', error);
     }
@@ -135,39 +154,39 @@ bot.on('callback_query', async (callbackQuery) => {
 // 3. Text Messages
 bot.on('message', async (msg) => {
     const chatId = msg.chat.id;
-    // --- THIS IS THE FIX ---
-    // If a message starts with '/', let the 'onText' listeners handle it.
     if (msg.text && msg.text.startsWith('/')) {
-        return; // Do not process as a main menu command
+        return; // Let 'onText' listeners handle all commands
     }
-    // --- END OF FIX ---
     
     try {
-        const user = await User.findOne({ where: { telegramId: msg.from.id } });
+        // --- THIS IS THE FIX ---
+        // Get user and language *before* calling the handler
+        const { user, __ } = await getUserAndLocale(msg.from);
+        // --- END OF FIX ---
+        
         if (!user) {
-            // User doesn't exist, only respond to /start (which is handled above)
-            return;
+            return bot.sendMessage(chatId, "Please start the bot by sending /start");
         }
         
         notifyAdminOfActivity(msg.from, msg.text);
-        i18n.setLocale(user.language);
 
+        // Pass user and language function to the handlers
         if (user.state !== 'none' && msg.text) {
-            await handleTextInput(bot, msg, user);
-        } else if (msg.text) { // All non-commands land here
-            await handleMessage(bot, msg, user);
+            await handleTextInput(bot, msg, user, __);
+        } else if (msg.text) {
+            await handleMessage(bot, msg, user, __);
         }
     } catch (error) {
         console.error('Error handling message:', error);
-        bot.sendMessage(chatId, i18n.__('error_generic'));
+        bot.sendMessage(chatId, "An error occurred. Please try again later.");
     }
 });
 
-// --- ADMIN COMMAND /add ---
+// --- ADMIN COMMANDS (LANGUAGE FIX) ---
 bot.onText(/\/add (\d+\.?\d*) (\d+)/, async (msg, match) => {
     const chatId = msg.chat.id;
     const adminId = msg.from.id;
-    if (adminId.toString() !== ADMIN_CHAT_ID.toString()) { return; } // Security Check
+    if (adminId.toString() !== ADMIN_CHAT_ID.toString()) { return; }
     try {
         const amount = parseFloat(match[1]);
         const telegramId = match[2];
@@ -176,24 +195,26 @@ bot.onText(/\/add (\d+\.?\d*) (\d+)/, async (msg, match) => {
             return bot.sendMessage(chatId, `Admin: User with ID ${telegramId} not found.`);
         }
         
-        user.mainBalance = (user.mainBalance || 0) + amount; // Safety check
+        user.mainBalance = (user.mainBalance || 0) + amount;
         await user.save();
 
         await bot.sendMessage(chatId, `Success: Added ${amount} USDT to ${user.firstName} (ID: ${user.telegramId}).\nNew Main Balance: ${user.mainBalance.toFixed(2)} USDT.`);
         
+        // --- THIS IS THE FIX ---
         i18n.setLocale(user.language);
-        await bot.sendMessage(user.telegramId, i18n.__('admin.add_balance_user', amount.toFixed(2), user.mainBalance.toFixed(2)));
+        const __ = i18n.__;
+        // --- END OF FIX ---
+        await bot.sendMessage(user.telegramId, __('admin.add_balance_user', amount.toFixed(2), user.mainBalance.toFixed(2)));
     } catch (error) {
         console.error("Admin /add error:", error);
         await bot.sendMessage(chatId, "Admin: An error occurred.");
     }
 });
 
-// --- ADMIN COMMAND /remove ---
 bot.onText(/\/remove (\d+\.?\d*) (\d+)/, async (msg, match) => {
     const chatId = msg.chat.id;
     const adminId = msg.from.id;
-    if (adminId.toString() !== ADMIN_CHAT_ID.toString()) { return; } // Security Check
+    if (adminId.toString() !== ADMIN_CHAT_ID.toString()) { return; }
     try {
         const amount = parseFloat(match[1]);
         const telegramId = match[2];
@@ -211,8 +232,11 @@ bot.onText(/\/remove (\d+\.?\d*) (\d+)/, async (msg, match) => {
 
         await bot.sendMessage(chatId, `Success: Removed ${amount} USDT from ${user.firstName} (ID: ${user.telegramId}).\nNew Main Balance: ${user.mainBalance.toFixed(2)} USDT.`);
         
+        // --- THIS IS THE FIX ---
         i18n.setLocale(user.language);
-        await bot.sendMessage(user.telegramId, i18n.__('admin.remove_balance_user', amount.toFixed(2), user.mainBalance.toFixed(2)));
+        const __ = i18n.__;
+        // --- END OF FIX ---
+        await bot.sendMessage(user.telegramId, __('admin.remove_balance_user', amount.toFixed(2), user.mainBalance.toFixed(2)));
     } catch (error) {
         console.error("Admin /remove error:", error);
         await bot.sendMessage(chatId, "Admin: An error occurred.");
@@ -228,7 +252,7 @@ app.listen(PORT, async () => {
         console.log('PostgreSQL connected successfully.');
         
         // --- THIS IS THE FIX ---
-        // We will force a database rebuild ONE TIME to fix the schema.
+        // Force a database rebuild ONE TIME to fix the schema.
         await sequelize.sync({ force: true }); 
         console.log('All models were synchronized: FORCED REBUILD.');
         // --- END OF FIX ---
