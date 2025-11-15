@@ -8,12 +8,7 @@ const {
     BOT_USERNAME
 } = require('../config');
 const { sequelize, User, Transaction } = require('../models');
-
-// --- THIS IS THE FIX ---
-// We remove the TelegramBot import here, 
-// because it's passed from index.js now.
-// const TelegramBot = require('node-telegram-bot-api');
-// --- END OF FIX ---
+// We no longer need to import TelegramBot here
 
 const NOWPAYMENTS_API_URL = "https://api.nowpayments.io/v1";
 
@@ -90,11 +85,8 @@ function verifyIPN(body, signature, secret) {
 
 /**
  * Handles incoming IPN webhooks from NowPayments
- * --- THIS IS THE FIX ---
- * We now accept the `bot` instance as an argument
  */
-const handleNowPaymentsIPN = async (req, res, bot) => {
-    // --- END OF FIX ---
+const handleNowPaymentsIPN = async (req, res, bot) => { // Accept bot instance
     
     const signature = req.headers['x-nowpayments-sig'];
     if (!signature) {
