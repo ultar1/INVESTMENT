@@ -1,9 +1,16 @@
 const i18n = require('../services/i18n');
 const { sequelize, User, Investment, Transaction } = require('../models');
-const { getMainMenuKeyboard, getCancelKeyboard, getNetworkKeyboard, getAdminReviewKeyboard } = require('../services/keyboards');
+const { 
+    getMainMenuKeyboard, 
+    getCancelKeyboard, 
+    getWithdrawNetworkKeyboard, // Renamed
+    getDepositNetworkKeyboard, // New
+    getAdminReviewKeyboard 
+} = require('../services/keyboards');
 const { PLANS, MIN_WITHDRAWAL, MIN_DEPOSIT, ADMIN_CHAT_ID } = require('../config');
 const { handleReferralBonus } = require('./investmentHandler');
-const { generateDepositInvoice } = require('./paymentHandler');
+// We no longer call generateDepositInvoice from here
+// const { generateDepositInvoice } = require('./paymentHandler'); 
 
 // Basic wallet validation
 function isValidWallet(address) {
@@ -46,14 +53,13 @@ const handleTextInput = async (bot, msg, user) => {
                 
                 await t.commit();
                 
-                // Handle referrals (can be async, no need to wait)
                 handleReferralBonus(user.referrerId, amount, user.id);
 
                 await bot.sendMessage(chatId, __("plans.invest_success", amount, __(`plans.plan_${plan.id.split('_')[1]}_button`), plan.hours));
 
             } catch (error) {
                 await t.rollback();
-                throw error; // Let outer catch block handle it
+                throw error; 
             }
         }
         
@@ -64,24 +70,18 @@ const handleTextInput = async (bot, msg, user) => {
                 return bot.sendMessage(chatId, __("deposit.min_error", MIN_DEPOSIT), { reply_markup: getCancelKeyboard(user) });
             }
             
-            const invoice = await generateDepositInvoice(user, amount);
-            if (invoice) {
-                await Transaction.create({
-                    user: user.id,
-                    type: 'deposit',
-                    amount: invoice.price_amount, // The amount in USD
-                    status: 'pending',
-                    txId: invoice.payment_id // Save NowPayments ID
-                });
-                
-                user.state = 'none';
-                await user.save();
-
-                const text = __("deposit.invoice_created", invoice.pay_amount, invoice.pay_address);
-                await bot.sendMessage(chatId, text, { parse_mode: 'Markdown' });
-            } else {
-                await bot.sendMessage(chatId, __("deposit.api_error"));
-            }
+            // --- NEW LOGIC ---
+            // Don't create invoice yet. Ask for network.
+            user.state = 'awaiting_deposit_network';
+            user.stateContext = { amount: amount }; // Save amount in context
+            await user.save();
+            
+            // Ask user to select the network
+            await bot.sendMessage(chatId, __("deposit.ask_network", amount), {
+                reply_markup: getDepositNetworkKeyboard(user)
+            });
+            // We don't send main menu, we wait for button click
+            return; // Exit handler
         }
 
         // --- 3. Awaiting Wallet Address ---
@@ -95,8 +95,10 @@ const handleTextInput = async (bot, msg, user) => {
             await user.save();
             
             await bot.sendMessage(chatId, __("withdraw.ask_network"), {
-                reply_markup: getNetworkKeyboard(user)
+                reply_markup: getWithdrawNetworkKeyboard(user) // Use the withdraw keyboard
             });
+            // Wait for button click
+            return;
         }
         
         // --- 4. Awaiting Withdrawal Amount ---
@@ -107,55 +109,42 @@ const handleTextInput = async (bot, msg, user) => {
             if (amount < MIN_WITHDRAWAL) return bot.sendMessage(chatId, __("withdraw.min_error", MIN_WITHDRAWAL), { reply_markup: getCancelKeyboard(user) });
             if (amount > user.balance) return bot.sendMessage(chatId, __("withdraw.insufficient_funds", user.balance), { reply_markup: getCancelKeyboard(user) });
             
-            // --- NEW MANUAL WITHDRAWAL LOGIC ---
-            
-            // 1. Use a database transaction
             const t = await sequelize.transaction();
             let newTx;
             try {
-                // 2. Debit user balance
                 user.balance -= amount;
                 user.state = 'none';
                 await user.save({ transaction: t });
 
-                // 3. Create PENDING transaction
                 newTx = await Transaction.create({
                     user: user.id,
                     type: 'withdrawal',
                     amount: amount,
-                    status: 'pending', // Key change: status is 'pending'
+                    status: 'pending',
                     walletAddress: user.walletAddress
                 }, { transaction: t });
                 
-                // 4. Commit changes
                 await t.commit();
                 
             } catch (error) {
-                await t.rollback(); // Rollback if anything fails
+                await t.rollback(); 
                 console.error("Withdrawal creation error:", error);
                 return bot.sendMessage(chatId, __('error_generic'));
             }
 
-            // 5. Notify user
             await bot.sendMessage(chatId, __("withdraw.request_success", amount));
 
-            // 6. Notify admin
             if (ADMIN_CHAT_ID) {
                 try {
-                    // We use the admin's default language for the notification
-                    // A better way would be to load the 'en' locale, but
-                    // i18n instance (__) is tied to the user.
-                    // For simplicity, we assume the admin understands the user's language.
                     const notifyText = __("withdraw.notify_admin", 
                         user.firstName || 'N/A', 
                         user.telegramId, 
                         amount, 
                         user.walletAddress, 
                         user.walletNetwork.toUpperCase(),
-                        newTx.id // Pass the transaction ID
+                        newTx.id
                     );
                     
-                    // Use the user's i18n instance (__) for the keyboard
                     const adminKeyboard = getAdminReviewKeyboard(newTx.id, __);
                     
                     await bot.sendMessage(ADMIN_CHAT_ID, notifyText, {
