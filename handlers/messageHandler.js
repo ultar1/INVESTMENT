@@ -34,7 +34,10 @@ const handleMessage = async (bot, msg, user) => {
     try {
         // 📈 Make Investment
         if (text === __('menu.make_investment')) {
-            const text = __("plans.title") + "\n\n" + __("common.balance", user.mainBalance);
+            // --- THIS IS THE FIX for %.2f ---
+            const balanceText = user.mainBalance.toFixed(2);
+            const text = __("plans.title") + "\n\n" + __("common.balance", balanceText);
+            // --- END OF FIX ---
             await bot.sendMessage(chatId, text, {
                 reply_markup: getInvestmentPlansKeyboard(user)
             });
@@ -59,18 +62,29 @@ const handleMessage = async (bot, msg, user) => {
             for (const inv of investments) {
                 const plan = PLANS[inv.planId];
                 const remaining = formatDuration(inv.maturesAt - new Date());
+                // --- THIS IS THE FIX for %.2f ---
                 response += __("investments.investment_entry", 
-                    inv.profitPercent, plan.hours, inv.amount, inv.profitAmount, remaining
+                    inv.profitPercent, 
+                    plan.hours, 
+                    inv.amount.toFixed(2), 
+                    inv.profitAmount.toFixed(2), 
+                    remaining
                 ) + "\n\n";
+                // --- END OF FIX ---
             }
             await bot.sendMessage(chatId, response);
         }
 
         // 💰 My Balance
         else if (text === __('menu.my_balance')) {
-            // --- THIS IS THE FIX ---
-            // Pass all 4 variables to the language string
-            const text = __("balance.title", user.mainBalance, user.bonusBalance, user.totalInvested, user.totalWithdrawn);
+            // --- THIS IS THE FIX for %.2f and Balance Text ---
+            // We pass all 4 formatted variables
+            const text = __("balance.title", 
+                user.mainBalance.toFixed(2), 
+                user.bonusBalance.toFixed(2), 
+                user.totalInvested.toFixed(2), 
+                user.totalWithdrawn.toFixed(2)
+            );
             // --- END OF FIX ---
             await bot.sendMessage(chatId, text, {
                 reply_markup: getBalanceKeyboard(user)
