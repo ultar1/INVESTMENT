@@ -5,11 +5,9 @@ const {
     getInvestmentPlansKeyboard, 
     getCancelKeyboard,
     getBackKeyboard,
-    getWithdrawNetworkKeyboard // We no longer need getDepositNetworkKeyboard
+    getWithdrawNetworkKeyboard
 } = require('../services/keyboards');
-const { PLANS, MIN_WITHDRAWAL, MIN_DEPOSIT, ADMIN_CHAT_ID } = require('../config');
-// We no longer need generateDepositInvoice here
-// const { generateDepositInvoice } = require('../handlers/paymentHandler');
+const { PLANS, MIN_WITHDRAWAL, MIN_DEPOSIT, ADMIN_CHAT_ID, WELCOME_BONUS } = require('../config'); // Import WELCOME_BONUS
 
 // Helper to edit message
 async function editOrSend(bot, chatId, msgId, text, options) {
@@ -59,7 +57,7 @@ const handleCallback = async (bot, callbackQuery) => {
                 txUser.totalWithdrawn += tx.amount;
                 await txUser.save({ transaction: t });
                 await t.commit();
-                await bot.editMessageText(msg.text + `\n\n✅ Approved by ${from.first_name}`, {
+                await bot.editMessageText(msg.text + `\n\nApproved by ${from.first_name}`, {
                     chat_id: chatId, message_id: msgId, reply_markup: null
                 });
                 await bot.sendMessage(txUser.telegramId, __("withdraw.notify_user_approved", tx.amount));
@@ -69,7 +67,7 @@ const handleCallback = async (bot, callbackQuery) => {
                 txUser.balance += tx.amount;
                 await txUser.save({ transaction: t });
                 await t.commit();
-                await bot.editMessageText(msg.text + `\n\n❌ Rejected by ${from.first_name}`, {
+                await bot.editMessageText(msg.text + `\n\nRejected by ${from.first_name}`, {
                     chat_id: chatId, message_id: msgId, reply_markup: null
                 });
                 await bot.sendMessage(txUser.telegramId, __("withdraw.notify_user_rejected", tx.amount));
@@ -90,14 +88,26 @@ const handleCallback = async (bot, callbackQuery) => {
     try {
         // --- Language Selection ---
         if (data.startsWith('set_lang_')) {
-            // (Unchanged)
             user.language = data.split('_')[2];
             await user.save();
             i18n.setLocale(user.language);
+            
             await bot.deleteMessage(chatId, msgId);
             await bot.sendMessage(chatId, __("language_set", from.first_name), {
                 reply_markup: getMainMenuKeyboard(user)
             });
+
+            // --- THIS IS THE FIX ---
+            // Check if this was a new user
+            if (user.stateContext && user.stateContext.isNewUser) {
+                // Send the bonus message
+                await bot.sendMessage(chatId, __("welcome_bonus_message", WELCOME_BONUS.toFixed(2)));
+                
+                // Clear the flag
+                user.stateContext = {};
+                await user.save();
+            }
+            // --- END OF FIX ---
         }
 
         // --- Back to Main Menu ---
@@ -159,9 +169,6 @@ const handleCallback = async (bot, callbackQuery) => {
                 reply_markup: getCancelKeyboard(user) 
             });
         }
-        
-        // --- REMOVED: Deposit (Step 2) 'deposit_network_' ---
-        // This logic is no longer needed.
         
         // --- Withdraw (Step 1) ---
         else if (data === 'withdraw') {
