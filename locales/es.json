@@ -1,0 +1,85 @@
+{
+"welcome": "🇪🇸 ¡Bienvenido! Por favor, selecciona tu idioma.",
+"language_set": "Idioma establecido en Español. ¡Bienvenido, %s!",
+"main_menu_title": "👤 Menú Principal\n\n¡Bienvenido de nuevo, %s!",
+"error_generic": "Ocurrió un error. Por favor, inténtalo de nuevo o contacta a soporte.",
+"common": {
+"back": "⬅️ Volver",
+"cancel": "❌ Cancelar",
+"balance": "Tu saldo: %.2f USDT"
+},
+"menu": {
+"make_investment": "📈 Realizar Inversión",
+"my_investments": "📊 Mis Inversiones",
+"my_balance": "💰 Mi Saldo",
+"referral_program": "👥 Programa de Referidos",
+"faq": "❓ FAQ",
+"support": "📞 Soporte"
+},
+"plans": {
+"title": "📈 Elige un plan de inversión:",
+"plan_1_button": "Plan 1: 15%% por 24 horas",
+"plan_2_button": "Plan 2: 20%% por 72 horas",
+"plan_3_button": "Plan 3: 27%% por 7 días",
+"plan_4_button": "Plan 4: 32%% por 30 días",
+"details": "Detalles del Plan:\nBeneficio: %s%%\nDuración: %s horas\nLímites: %s - %s USDT\n\n%s\n\nPor favor, introduce la cantidad que deseas invertir:",
+"invest_success": "✅ ¡Éxito! Has invertido %.2f USDT en el plan %s. Vencerá en %s horas.",
+"err_min_amount": "La inversión mínima es %s USDT.",
+"err_max_amount": "La inversión máxima es %s USDT.",
+"err_insufficient_funds": "Fondos insuficientes. Tu saldo es %.2f USDT.",
+"err_invalid_amount": "Por favor, introduce un número válido."
+},
+"investments": {
+"title": "📊 Mis Inversiones Activas",
+"no_investments": "No tienes inversiones activas.\n\n¡Haz clic en el botón de abajo para hacer la primera!",
+"investment_entry": "Plan: %s%% por %s horas\nCantidad: %.2f USDT\nBeneficio: %.2f USDT\nVence en: %s"
+},
+"balance": {
+"title": "💰 Mi Saldo\n\nSaldo Principal: %.2f USDT\nTotal Invertido: %.2f USDT\nTotal Retirado: %.2f USDT",
+"deposit": "➕ Depositar",
+"withdraw": "➖ Retirar",
+"transactions": "🔄 Historial de Transacciones"
+},
+"deposit": {
+"ask_amount": "Por favor, introduce la cantidad que deseas depositar (Mín: %s USDT):",
+"min_error": "El depósito mínimo es %s USDT.",
+"invoice_created": "Por favor, envía exactamente %s USDT (TRC20/BEP20) a la dirección de abajo:\n\n%s\n\nTu saldo se acreditará automáticamente después de la confirmación del pago. Esta factura es válida por 24 horas.",
+"api_error": "No se pudo crear una factura de depósito. Por favor, inténtalo más tarde.",
+"ipn_success": "✅ ¡Tu depósito de %s USDT ha sido confirmado y añadido a tu saldo!"
+},
+"withdraw": {
+"min_error": "El retiro mínimo es %.2f USDT.",
+"insufficient_funds": "Fondos insuficientes. Solo tienes %.2f USDT para retirar.",
+"ask_wallet": "Por favor, introduce tu dirección de billetera USDT (TRC20 o BEP20):",
+"ask_network": "¿Es esta una dirección TRC20 (Tron) o BEP20 (BSC)?",
+"wallet_set_success": "✅ Dirección de billetera establecida: %s (%s)\n\nAhora, introduce la cantidad que deseas retirar (Mín: %s USDT):",
+"ask_amount": "Tu billetera: %s (%s)\n%s\n\nPor favor, introduce la cantidad a retirar (Mín: %s USDT):",
+"request_success": "✅ Tu solicitud de retiro de %.2f USDT ha sido enviada y está pendiente de revisión manual. Esto puede tardar hasta 12 horas.",
+"request_failed": "❌ Error de Retiro: %s. Por favor, contacta a soporte si esto persiste.",
+"invalid_wallet": "Dirección de billetera inválida. Por favor, inténtalo de nuevo.",
+"notify_admin": "Nueva solicitud de retiro:\n\nUsuario: %s (%s)\nCantidad: %.2f USDT\nBilletera: %s (%s)\n\nID de Transacción: %s",
+"admin_approve": "✅ Aprobar",
+"admin_reject": "❌ Rechazar",
+"notify_user_approved": "✅ Tu solicitud de retiro de %.2f USDT ha sido aprobada y procesada.",
+"notify_user_rejected": "❌ Tu solicitud de retiro de %.2f USDT ha sido rechazada. La cantidad ha sido devuelta a tu saldo."
+},
+"transactions": {
+"title": "🔄 Historial de Transacciones",
+"no_transactions": "Aún no tienes transacciones.",
+"entry": "%s | %s | %.2f USDT | Estado: %s"
+},
+"referral": {
+"title": "👥 Programa de Referidos",
+"link": "🔗 Tu enlace de referido:\n%s",
+"conditions": "💰 Condiciones del programa:\n🥇 Nivel 1: %s%% de las inversiones de referidos\n🥈 Nivel 2: %s%%\n🥉 Nivel 3: %s%%",
+"stats_all": "📊 Estadísticas de todos los tiempos:\n👥 Total de referidos: %s\n├ Nivel 1: %s\n├ Nivel 2: %s\n└ Nivel 3: %s",
+"earnings": "💎 Ganancias de referidos:\n📊 Total ganado: %.2f USDT"
+},
+"faq": {
+"title": "❓ Preguntas Frecuentes\n\n(Admin: Añade tu FAQ aquí)"
+},
+"support": {
+"title": "📞 Soporte\n\nPara soporte técnico o cualquier consulta, por favor contacta a nuestro admin: @%s"
+},
+"action_canceled": "Acción cancelada."
+}
