@@ -55,8 +55,7 @@ const handleReferralBonus = async (referrerId, investmentAmount, fromUserId, __)
 
 // Finds and processes all completed investments for a user
 // --- THIS IS THE FIX ---
-// Accept `__` (language function) as an argument
-// AND fixed the copy-paste syntax error
+// Accept `bot` and `__` (language function) as arguments
 const processCompletedInvestments = async (userId, __) => {
 // --- END OF FIX ---
     try {
