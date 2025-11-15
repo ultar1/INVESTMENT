@@ -154,82 +154,66 @@ bot.on('message', async (msg) => {
     }
 });
 
-// --- NEW: ADMIN COMMAND /add ---
+// --- ADMIN COMMAND /add ---
 bot.onText(/\/add (\d+\.?\d*) (\d+)/, async (msg, match) => {
     const chatId = msg.chat.id;
     const adminId = msg.from.id;
-
-    // 1. Security Check
-    if (adminId.toString() !== ADMIN_CHAT_ID) {
-        console.warn(`Unauthorized /add command attempt by user ${adminId}`);
-        return;
-    }
-
+    if (adminId.toString() !== ADMIN_CHAT_ID) { return; }
     try {
         const amount = parseFloat(match[1]);
         const telegramId = match[2];
-
         const user = await User.findOne({ where: { telegramId: telegramId } });
         if (!user) {
             return bot.sendMessage(chatId, `Admin: User with ID ${telegramId} not found.`);
         }
-
-        user.balance += amount;
+        
+        // --- THIS IS THE FIX ---
+        user.mainBalance += amount; // Add to mainBalance
+        // --- END OF FIX ---
         await user.save();
 
-        // Notify Admin
-        await bot.sendMessage(chatId, `Success: Added ${amount} USDT to ${user.firstName} (ID: ${user.telegramId}).\nNew Balance: ${user.balance.toFixed(2)} USDT.`);
-
-        // Notify User
+        await bot.sendMessage(chatId, `Success: Added ${amount} USDT to ${user.firstName} (ID: ${user.telegramId}).\nNew Main Balance: ${user.mainBalance.toFixed(2)} USDT.`);
+        
         i18n.setLocale(user.language);
-        await bot.sendMessage(user.telegramId, i18n.__('admin.add_balance_user', amount.toFixed(2), user.balance.toFixed(2)));
-
+        await bot.sendMessage(user.telegramId, i18n.__('admin.add_balance_user', amount.toFixed(2), user.mainBalance.toFixed(2)));
     } catch (error) {
         console.error("Admin /add error:", error);
         await bot.sendMessage(chatId, "Admin: An error occurred.");
     }
 });
 
-// --- NEW: ADMIN COMMAND /remove ---
+// --- ADMIN COMMAND /remove ---
 bot.onText(/\/remove (\d+\.?\d*) (\d+)/, async (msg, match) => {
     const chatId = msg.chat.id;
     const adminId = msg.from.id;
-
-    // 1. Security Check
-    if (adminId.toString() !== ADMIN_CHAT_ID) {
-        console.warn(`Unauthorized /remove command attempt by user ${adminId}`);
-        return;
-    }
-
+    if (adminId.toString() !== ADMIN_CHAT_ID) { return; }
     try {
         const amount = parseFloat(match[1]);
         const telegramId = match[2];
-
         const user = await User.findOne({ where: { telegramId: telegramId } });
         if (!user) {
             return bot.sendMessage(chatId, `Admin: User with ID ${telegramId} not found.`);
         }
 
-        if (user.balance < amount) {
-            return bot.sendMessage(chatId, `Admin: Cannot remove. User ${user.firstName} only has ${user.balance.toFixed(2)} USDT.`);
+        // --- THIS IS THE FIX ---
+        // Check mainBalance
+        if (user.mainBalance < amount) {
+            return bot.sendMessage(chatId, `Admin: Cannot remove. User ${user.firstName} only has ${user.mainBalance.toFixed(2)} USDT in main balance.`);
         }
-
-        user.balance -= amount;
+        user.mainBalance -= amount; // Remove from mainBalance
+        // --- END OF FIX ---
         await user.save();
 
-        // Notify Admin
-        await bot.sendMessage(chatId, `Success: Removed ${amount} USDT from ${user.firstName} (ID: ${user.telegramId}).\nNew Balance: ${user.balance.toFixed(2)} USDT.`);
-
-        // Notify User
+        await bot.sendMessage(chatId, `Success: Removed ${amount} USDT from ${user.firstName} (ID: ${user.telegramId}).\nNew Main Balance: ${user.mainBalance.toFixed(2)} USDT.`);
+        
         i18n.setLocale(user.language);
-        await bot.sendMessage(user.telegramId, i18n.__('admin.remove_balance_user', amount.toFixed(2), user.balance.toFixed(2)));
-
+        await bot.sendMessage(user.telegramId, i18n.__('admin.remove_balance_user', amount.toFixed(2), user.mainBalance.toFixed(2)));
     } catch (error) {
         console.error("Admin /remove error:", error);
         await bot.sendMessage(chatId, "Admin: An error occurred.");
     }
 });
-// --- END OF NEW COMMANDS ---
+// --- END OF ADMIN COMMANDS ---
 
 
 // --- Start Server and Database ---
