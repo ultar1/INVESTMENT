@@ -1,0 +1,39 @@
+Information on Working with the Bot
+October 17, 2025
+​Contents
+​GENERAL INFORMATION
+​REGISTRATION AND GETTING STARTED
+​DEPOSITS AND WITHDRAWALS
+​PROFITABILITY AND LEVELS
+​REFERRAL PROGRAM
+​GENERAL INFORMATION
+​FINTRUST is an investment bot that earns from arbitrage opportunities between exchanges. It automatically analyzes prices on different platforms and executes trades to secure profit, so the user does not need to perform any manual actions.
+​Each investment cycle lasts 5 hours, after which the profit is credited to the balance. After the cycle ends, there is an option to reinvest the amount, allowing for increased profitability. With consistent reinvestment, the daily yield ranges approximately from 4.95% to 8.78%, depending on the user’s level and the number of active referrals.
+​The minimum investment amount is 25 USDT, and there is no maximum limit. All operations are conducted in stable cryptocurrency USDT (BEP-20).
+​Return to contents
+​REGISTRATION AND GETTING STARTED
+​To start using the bot, go to @FIN_TRUSTBOT and click the “START” button. Registration on a website is not required — all actions take place directly within the Telegram bot.
+​The bot works on all devices that support Telegram, including phones and computers. If the bot stops responding, it is recommended to restart it or contact support at @FINTRUST_admin.
+​For beginners, there is a “Help” section containing step-by-step instructions on using the bot. You can change the interface language using the /lang command. If a user accidentally exits the bot, simply open @FIN_TRUSTBOT again and click “START” — the profile will be preserved.
+​Return to contents
+​DEPOSITS AND WITHDRAWALS
+​To deposit funds, go to the “Deposit Balance” section and send USDT (BEP-20) to the provided address. There is no deposit fee, and funds are usually credited within a few minutes after network confirmation.
+​Withdrawals are made via the “My Balance” section: simply click “Withdraw,” specify the amount and your USDT (BEP-20) wallet address. The minimum withdrawal amount is 10 USDT, with a 5% withdrawal fee. The principal deposit can be withdrawn after the investment cycle ends. Funds are credited within a maximum of 24 hours.
+​Important: Only the BEP-20 network is supported; other networks cannot be used.
+​Return to contents
+​PROFITABILITY AND LEVELS
+​Profit is credited automatically at the end of each 5-hour investment cycle and added to your bot balance. Profitability depends on the number of active referrals and your current system level. Without referrals, the base profit is 1.00%–1.01% per cycle (≈ 4.95% per day).
+​To increase profitability, you need to attract active partners. The number of referrals required to reach the next level is as follows:
+​2 referrals — Level 2 (1.1–1.11%)
+4 referrals — Level 3 (1.2–1.21%)
+6 referrals — Level 4 (1.3–1.31%)
+8 referrals — Level 5 (1.4–1.41%)
+10 referrals — Level 6 (1.5–1.51%)
+15 referrals — Level 7 (1.6–1.61%)
+20 referrals — Level 8 (1.7–1.71%)
+​Level status updates automatically after the completion of your referral’s investment cycle. Profit is also credited on reinvested amounts — profit is automatically capitalized. Profitability may change only within the set ranges for each level.
+​Return to contents
+​REFERRAL PROGRAM
+​FINTRUST has a three-level referral program that allows you to earn income from the profits of invited referrals. The percentage rewards by level are: Level 1 — 5%, Level 2 — 4%, Level 3 — 3%. Referral bonuses are credited automatically after your partner receives profit from an investment cycle.
+​In the “Referral Program” section, you can find your referral link, as well as your network structure and all partner levels. The number of invited referrals is unlimited. An active referral is one who has made a deposit and participates in investment cycles. Active referrals increase your income level and generate additional profit percentages. Referral bonuses are retained and automatically credited to your balance.
+​Return to contents
