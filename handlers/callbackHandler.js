@@ -1,5 +1,5 @@
 const i18n = require('../services/i18n');
-const { User, Transaction } = require('../models');
+const { sequelize, User, Transaction } = require('../models');
 const { 
     getMainMenuKeyboard, 
     getInvestmentPlansKeyboard, 
@@ -7,13 +7,14 @@ const {
     getBackKeyboard,
     getNetworkKeyboard
 } = require('../services/keyboards');
-const { PLANS, MIN_WITHDRAWAL, MIN_DEPOSIT } = require('../config');
+const { PLANS, MIN_WITHDRAWAL, MIN_DEPOSIT, ADMIN_CHAT_ID } = require('../config');
 
 // Helper to edit message
 async function editOrSend(bot, chatId, msgId, text, options) {
     try {
         await bot.editMessageText(text, { chat_id: chatId, message_id: msgId, ...options });
     } catch (error) {
+        // If message is not modified or deleted, send a new one
         await bot.sendMessage(chatId, text, options);
     }
 }
@@ -26,8 +27,92 @@ const handleCallback = async (bot, callbackQuery) => {
     const from = callbackQuery.from;
 
     const user = await User.findOne({ where: { telegramId: from.id } });
+    
+    // Note: 'user' here is the person who CLICKED the button.
+    // This may be the admin, not the user who owns the transaction.
+
     if (!user) return bot.answerCallbackQuery(callbackQuery.id);
 
+    // --- NEW: Admin Approval Logic ---
+    if (data.startsWith('admin_approve_') || data.startsWith('admin_reject_')) {
+        // 1. Check if the clicker is the admin
+        if (!ADMIN_CHAT_ID || from.id.toString() !== ADMIN_CHAT_ID) {
+            return bot.answerCallbackQuery(callbackQuery.id, "You are not authorized for this action.", true);
+        }
+
+        const action = data.split('_')[1];
+        const txId = data.split('_')[2];
+        
+        // 2. Find the transaction and its user
+        const tx = await Transaction.findOne({ where: { id: txId }, include: User });
+        
+        if (!tx) {
+            await bot.editMessageText(msg.text + "\n\nError: Transaction not found.", { chat_id: chatId, message_id: msgId });
+            return bot.answerCallbackQuery(callbackQuery.id);
+        }
+        if (tx.status !== 'pending') {
+            await bot.editMessageText(msg.text + "\n\nError: This transaction has already been processed.", { chat_id: chatId, message_id: msgId });
+            return bot.answerCallbackQuery(callbackQuery.id);
+        }
+        
+        const txUser = tx.User; // The user who made the request
+        i18n.setLocale(txUser.language); // Set locale to the *user's* language for notification
+        const __ = i18n.__;
+        
+        const t = await sequelize.transaction();
+        try {
+            if (action === 'approve') {
+                // 3a. Approve Logic
+                tx.status = 'completed';
+                await tx.save({ transaction: t });
+                
+                // Now update the user's totalWithdrawn
+                txUser.totalWithdrawn += tx.amount;
+                await txUser.save({ transaction: t });
+                
+                await t.commit();
+
+                // Notify admin (by editing the message)
+                await bot.editMessageText(msg.text + `\n\n✅ Approved by ${from.first_name}`, {
+                    chat_id: chatId, message_id: msgId, reply_markup: null
+                });
+                
+                // Notify user
+                await bot.sendMessage(txUser.telegramId, __("withdraw.notify_user_approved", tx.amount));
+
+            } else if (action === 'reject') {
+                // 3b. Reject Logic
+                tx.status = 'failed';
+                await tx.save({ transaction: t });
+                
+                // Refund the user's balance
+                txUser.balance += tx.amount;
+                await txUser.save({ transaction: t });
+
+                await t.commit();
+                
+                // Notify admin
+                await bot.editMessageText(msg.text + `\n\n❌ Rejected by ${from.first_name}`, {
+                    chat_id: chatId, message_id: msgId, reply_markup: null
+                });
+                
+                // Notify user
+                await bot.sendMessage(txUser.telegramId, __("withdraw.notify_user_rejected", tx.amount));
+            }
+        } catch (e) {
+            await t.rollback();
+            console.error("Admin review processing error:", e);
+            bot.answerCallbackQuery(callbackQuery.id, "Database error.", true);
+        }
+        
+        return bot.answerCallbackQuery(callbackQuery.id, "Action processed.");
+    }
+    
+    // --- End of Admin Logic ---
+
+
+    // Set locale for the *user clicking*
+    // This part is for all other button clicks
     i18n.setLocale(user.language);
     const __ = i18n.__;
 
@@ -84,6 +169,10 @@ const handleCallback = async (bot, callbackQuery) => {
             user.stateContext = {};
             await user.save();
             await editOrSend(bot, chatId, msgId, __("action_canceled"), { reply_markup: undefined });
+            // Send main menu to show keyboard again
+            await bot.sendMessage(chatId, __("main_menu_title", from.first_name), {
+                reply_markup: getMainMenuKeyboard(user)
+            });
         }
 
         // --- Deposit (Step 1) ---
@@ -122,7 +211,18 @@ const handleCallback = async (bot, callbackQuery) => {
         // --- Set Wallet Network (Withdraw Step 2.5) ---
         else if (data.startsWith('set_network_')) {
             const network = data.split('_')[2]; // 'trc20' or 'bep20'
-            user.walletAddress = user.stateContext.wallet;
+            
+            // Get wallet from context
+            const wallet = user.stateContext.wallet;
+            if(!wallet || user.state !== 'awaiting_wallet_network') {
+                // State is incorrect, cancel
+                user.state = 'none';
+                user.stateContext = {};
+                await user.save();
+                return bot.answerCallbackQuery(callbackQuery.id, "Error: State expired. Please try again.", true);
+            }
+
+            user.walletAddress = wallet;
             user.walletNetwork = network;
             user.state = 'awaiting_withdrawal_amount';
             user.stateContext = {};
@@ -164,6 +264,7 @@ const handleCallback = async (bot, callbackQuery) => {
         bot.answerCallbackQuery(callbackQuery.id, __("error_generic"), true);
     }
     
+    // Acknowledge all non-admin clicks here
     bot.answerCallbackQuery(callbackQuery.id);
 };
 
