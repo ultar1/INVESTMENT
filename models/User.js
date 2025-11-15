@@ -23,10 +23,19 @@ const User = sequelize.define('User', {
         type: DataTypes.STRING,
         defaultValue: 'en'
     },
-    balance: {
+    
+    // --- FIX: Replaced the old 'balance' field with 'mainBalance' and 'bonusBalance' ---
+    // This matches what your handlers are using and fixes the balance bug.
+    mainBalance: {
         type: DataTypes.DOUBLE,
         defaultValue: 0
     },
+    bonusBalance: {
+        type: DataTypes.DOUBLE,
+        defaultValue: 0
+    },
+    // --- END OF FIX ---
+
     walletAddress: {
         type: DataTypes.STRING,
         defaultValue: null
