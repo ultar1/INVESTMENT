@@ -52,7 +52,7 @@ const getInvestmentPlansKeyboard = (user) => {
     };
 };
 
-// Renamed from getNetworkKeyboard for clarity
+// Renamed for clarity
 const getWithdrawNetworkKeyboard = (user) => {
     const __ = setLocale(user).__;
     return {
@@ -63,17 +63,8 @@ const getWithdrawNetworkKeyboard = (user) => {
     };
 };
 
-// --- NEW KEYBOARD ---
-// For selecting deposit network
-const getDepositNetworkKeyboard = (user) => {
-    const __ = setLocale(user).__;
-    return {
-         inline_keyboard: [
-            [{ text: "TRC20 (Tron)", callback_data: "deposit_network_trc20" }, { text: "BEP20 (BSC)", callback_data: "deposit_network_bep20" }],
-            [{ text: __('common.cancel'), callback_data: "cancel_action" }]
-        ]
-    };
-};
+// --- REMOVED getDepositNetworkKeyboard ---
+// It is no longer needed with the new generic invoice flow.
 
 const getCancelKeyboard = (user) => {
     const __ = setLocale(user).__;
@@ -120,8 +111,8 @@ module.exports = {
     getMainMenuKeyboard,
     getBalanceKeyboard,
     getInvestmentPlansKeyboard,
-    getWithdrawNetworkKeyboard, // Renamed
-    getDepositNetworkKeyboard, // New
+    getWithdrawNetworkKeyboard,
+    // getDepositNetworkKeyboard is removed
     getCancelKeyboard,
     getBackKeyboard,
     getMakeInvestmentButton,
