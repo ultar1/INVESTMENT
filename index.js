@@ -2,7 +2,7 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const TelegramBot = require('node-telegram-bot-api');
 const { sequelize } = require('./models');
-const { PORT, BOT_TOKEN, WEBHOOK_DOMAIN, ADMIN_CHAT_ID, BOT_USERNAME } = require('./config'); // Added BOT_USERNAME
+const { PORT, BOT_TOKEN, WEBHOOK_DOMAIN, ADMIN_CHAT_ID, BOT_USERNAME } = require('./config');
 const i18n = require('./services/i18n');
 const { registerUser } = require('./handlers/startHandler');
 const { handleMessage } = require('./handlers/messageHandler');
@@ -52,19 +52,21 @@ app.get('/health', (req, res) => {
     res.status(200).send('OK');
 });
 
-// --- NEW: Helper function for Admin Notifications ---
-/**
- * Sends a non-blocking notification to the admin on user activity.
- * This creates its own bot instance to avoid any webhook conflicts.
- */
-async function notifyAdminOfActivity(from) {
-    if (!ADMIN_CHAT_ID) return; // Don't run if no admin ID
+// --- FIX: Admin Notification Cache ---
+// This will store { messageId, timestamp } for each user
+const adminNotificationCache = new Map();
+const TEN_MINUTES_MS = 10 * 60 * 1000;
 
-    // Create a new bot instance just for sending this message
-    // This is more reliable than passing the main 'bot' object
+/**
+ * Sends a non-blocking, anti-spam notification to the admin.
+ * It will EDIT the last message if it's from the same user within 10 mins.
+ */
+async function notifyAdminOfActivity(from, action) {
+    if (!ADMIN_CHAT_ID) return; 
+
+    // Use a separate bot instance for sending, as the main one is on webhook
     const notifyBot = new TelegramBot(BOT_TOKEN);
 
-    // Helper to sanitize text for HTML
     const sanitize = (text) => {
         if (!text) return 'N/A';
         return text.toString().replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -73,8 +75,8 @@ async function notifyAdminOfActivity(from) {
     const time = new Date().toLocaleTimeString('en-GB', { timeZone: 'UTC' });
     const name = sanitize(from.first_name);
     const username = from.username ? `@${from.username}` : 'N/A';
-    // --- FIX: Match your requested format ---
-    const actionText = sanitize(`@${BOT_USERNAME || 'FIN_TRUSTBOT'}`);
+    // --- FIX: Use the actual action from the user ---
+    const actionText = sanitize(action) || 'Interaction';
 
     const message = [
         `<b>User Online:</b>`,
@@ -85,10 +87,43 @@ async function notifyAdminOfActivity(from) {
         `<b>Time:</b> ${time} (UTC)`
     ].join('\n');
 
+    const currentTime = Date.now();
+    const cached = adminNotificationCache.get(from.id);
+
     try {
-        await notifyBot.sendMessage(ADMIN_CHAT_ID, message, { parse_mode: 'HTML' });
+        if (cached && (currentTime - cached.timestamp < TEN_MINUTES_MS)) {
+            // --- 1. Try to EDIT the message ---
+            await notifyBot.editMessageText(message, { 
+                chat_id: ADMIN_CHAT_ID, 
+                message_id: cached.messageId, 
+                parse_mode: 'HTML' 
+            });
+            // Update timestamp
+            adminNotificationCache.set(from.id, { ...cached, timestamp: currentTime });
+        } else {
+            // --- 2. Send a NEW message ---
+            const sentMessage = await notifyBot.sendMessage(ADMIN_CHAT_ID, message, { parse_mode: 'HTML' });
+            // Store new messageId and timestamp
+            adminNotificationCache.set(from.id, { 
+                messageId: sentMessage.message_id, 
+                timestamp: currentTime 
+            });
+        }
     } catch (error) {
-        console.error('Failed to send admin notification:', error.message);
+        // Handle error (e.g., message was deleted, so we can't edit it)
+        if (error.response && error.response.body.description.includes("message to edit not found")) {
+            // The message was deleted. Send a new one.
+            try {
+                const sentMessage = await notifyBot.sendMessage(ADMIN_CHAT_ID, message, { parse_mode: 'HTML' });
+                adminNotificationCache.set(from.id, { 
+                    messageId: sentMessage.message_id, 
+                    timestamp: currentTime 
+                });
+            } catch (e) {}
+        } else {
+            // Other error
+            console.error('Failed to send admin notification:', error.message);
+        }
     }
 }
 
@@ -97,7 +132,8 @@ async function notifyAdminOfActivity(from) {
 // 1. /start command
 bot.onText(/\/start(?: (.+))?/, async (msg, match) => {
     const chatId = msg.chat.id;
-    notifyAdminOfActivity(msg.from); // Notify admin
+    // --- FIX: Pass the action ---
+    notifyAdminOfActivity(msg.from, msg.text);
     
     const referrerCode = match ? match[1] : null;
     try {
@@ -110,7 +146,8 @@ bot.onText(/\/start(?: (.+))?/, async (msg, match) => {
 
 // 2. Callback Queries (Button Clicks)
 bot.on('callback_query', async (callbackQuery) => {
-    notifyAdminOfActivity(callbackQuery.from); // Notify admin
+    // --- FIX: Pass the action ---
+    notifyAdminOfActivity(callbackQuery.from, `Button: ${callbackQuery.data}`);
     
     try {
         await handleCallback(bot, callbackQuery);
@@ -130,7 +167,8 @@ bot.on('message', async (msg) => {
             return bot.sendMessage(chatId, "Please start the bot by sending /start");
         }
         
-        notifyAdminOfActivity(msg.from); // Notify admin
+        // --- FIX: Pass the action ---
+        notifyAdminOfActivity(msg.from, msg.text);
         
         i18n.setLocale(user.language);
 
@@ -152,9 +190,8 @@ app.listen(PORT, async () => {
         await sequelize.authenticate();
         console.log('PostgreSQL connected successfully.');
         
-        // --- FIX for previous crashes ---
-        // We will try 'alter' first. If you still have crashes,
-        // change this back to 'force: true' for ONE deploy.
+        // Use 'alter: true' to be safe. 
+        // If "Users" table still not found, change to 'force: true' for ONE deploy.
         await sequelize.sync({ alter: true }); 
         console.log('All models were synchronized successfully (alter).');
         
