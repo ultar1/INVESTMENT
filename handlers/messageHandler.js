@@ -25,9 +25,8 @@ async function getReferralCounts(userId) {
     return { l1: l1_ids.length, l2: l2_ids.length, l3: l3_count };
 }
 
-// --- FIX: Corrected typo from '=' to '=>' ---
+// --- FIX 1: Corrected typo from '=' to '=>' ---
 const toFixedSafe = (num, digits = 2) => (typeof num === 'number' ? num : 0).toFixed(digits);
-// --- END OF FIX ---
 
 
 // --- THIS IS THE FIX ---
@@ -118,7 +117,9 @@ const handleMessage = async (bot, msg, user, __) => {
         // ❓ FAQ & 📞 Support
         else if (text === __('menu.faq')) {
             const faqText = `<b>${__("faq.title")}</b>\n\n${__("faq.link_text")}`;
-            await bot.sendMessage(chatId, faqText,
+            
+            // --- FIX 2: Removed extra '.' after faqText ---
+            await bot.sendMessage(chatId, faqText, {
                 parse_mode: 'HTML',
                 reply_markup: {
                     inline_keyboard: [
@@ -126,6 +127,7 @@ const handleMessage = async (bot, msg, user, __) => {
                     ]
                 }
             });
+            // --- END OF FIX 2 ---
         }
         else if (text === __('menu.support')) {
             await bot.sendMessage(chatId, __('support.title', ADMIN_USERNAME));
