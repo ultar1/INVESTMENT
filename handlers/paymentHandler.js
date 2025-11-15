@@ -1,4 +1,4 @@
-const crypto = require('crypto'); // Built-in Node.js module
+const crypto = require('crypto');
 const i18n = require('../services/i18n');
 const { 
     NOWPAYMENTS_API_KEY, 
@@ -12,16 +12,23 @@ const TelegramBot = require('node-telegram-bot-api');
 const NOWPAYMENTS_API_URL = "https://api.nowpayments.io/v1";
 
 /**
- * Creates a deposit invoice via NowPayments API
+ * Creates a generic USD deposit invoice via NowPayments API
  * @param {object} user - The user object
  * @param {number} amount - The amount in USD
- * @param {string} network - The network ('trc20' or 'bep20')
  */
-const generateDepositInvoice = async (user, amount, network) => {
+const generateDepositInvoice = async (user, amount) => {
     
     // --- THIS IS THE FIX ---
-    // Use the correct API code based on the network
-    const pay_currency = network === 'trc20' ? 'usdttrc20' : 'usdtbep20';
+    // We REMOVE pay_currency.
+    // This creates a generic invoice where the user
+    // selects the coin/network on the NowPayments page.
+    const body = {
+        price_amount: amount,
+        price_currency: 'usd',
+        // pay_currency is intentionally removed
+        order_id: `user_${user.id}_${Date.now()}`,
+        ipn_callback_url: `${WEBHOOK_DOMAIN}/payment-ipn`
+    };
     // --- END OF FIX ---
 
     try {
@@ -31,24 +38,20 @@ const generateDepositInvoice = async (user, amount, network) => {
                 'x-api-key': NOWPAYMENTS_API_KEY,
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify({
-                price_amount: amount,
-                price_currency: 'usd',
-                pay_currency: pay_currency, // Use the corrected variable
-                order_id: `user_${user.id}_${Date.now()}`,
-                ipn_callback_url: `${WEBHOOK_DOMAIN}/payment-ipn`
-            })
+            body: JSON.stringify(body)
         });
 
         const payment = await response.json();
 
         if (!response.ok) {
-            // Log the error from NowPayments
             console.error("NowPayments createPayment error:", payment.message || 'Unknown error');
             return null;
         }
         
+        // We now return the full payment object,
+        // which includes the 'invoice_url'
         return payment;
+
     } catch (error) {
         console.error("NowPayments API request error:", error.message);
         return null;
@@ -60,23 +63,15 @@ const generateDepositInvoice = async (user, amount, network) => {
  */
 function verifyIPN(body, signature, secret) {
     try {
-        // Sort the body keys alphabetically
         const sortedBody = {};
         Object.keys(body).sort().forEach(key => {
             sortedBody[key] = body[key];
         });
-
-        // Stringify the sorted body
         const bodyString = JSON.stringify(sortedBody);
-        
-        // Create the HMAC-SHA512 hash
         const hmac = crypto.createHmac('sha512', secret);
         hmac.update(bodyString, 'utf-8');
         const calculatedSignature = hmac.digest('hex');
-        
-        // Compare the calculated signature with the one from the header
         return calculatedSignature === signature;
-
     } catch (e) {
         console.error("IPN verification logic error:", e.message);
         return false;
@@ -87,6 +82,8 @@ function verifyIPN(body, signature, secret) {
  * Handles incoming IPN webhooks from NowPayments
  */
 const handleNowPaymentsIPN = async (req, res) => {
+    // (This function is unchanged from the previous version)
+    
     // 1. Verify the IPN
     const signature = req.headers['x-nowpayments-sig'];
     if (!signature) {
@@ -122,13 +119,12 @@ const handleNowPaymentsIPN = async (req, res) => {
              return res.status(404).send('User not found.');
         }
 
-        // Use transaction for safety
         const t = await sequelize.transaction();
         try {
             const depositedAmount = parseFloat(outcome_amount);
             
             tx.status = 'completed';
-            tx.amount = depositedAmount; // Update to actual amount received
+            tx.amount = depositedAmount;
             await tx.save({ transaction: t });
             
             user.balance += depositedAmount;
@@ -136,7 +132,6 @@ const handleNowPaymentsIPN = async (req, res) => {
             
             await t.commit();
             
-            // Notify user
             try {
                 const bot = new TelegramBot(BOT_TOKEN);
                 i18n.setLocale(user.language);
@@ -152,15 +147,13 @@ const handleNowPaymentsIPN = async (req, res) => {
     }
     
     // --- Handle WITHDRAWAL confirmation ---
-    // (For manual payouts via NowPayments dashboard)
     if (type === 'payout' && (payment_status === 'finished' || payment_status === 'failed')) {
-        const tx = await Transaction.findOne({ where: { txId: id } }); // 'id' is used for payout
-        
+        // (This logic remains the same for manual dashboard payouts)
+        const tx = await Transaction.findOne({ where: { txId: id } });
         if (!tx || tx.status !== 'pending') {
             console.log(`IPN for payout ${id} already processed or not found.`);
             return res.status(200).send('OK');
         }
-
         if (payment_status === 'finished') {
             tx.status = 'completed';
             const user = await User.findByPk(tx.userId);
@@ -172,7 +165,7 @@ const handleNowPaymentsIPN = async (req, res) => {
             tx.status = 'failed';
             const user = await User.findByPk(tx.userId);
             if(user) {
-                user.balance += tx.amount; // Add money back
+                user.balance += tx.amount;
                 await user.save();
             }
         }
@@ -181,7 +174,6 @@ const handleNowPaymentsIPN = async (req, res) => {
 
     res.status(200).send('IPN processed.');
 };
-
 
 module.exports = { 
     generateDepositInvoice,
