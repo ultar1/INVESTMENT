@@ -14,6 +14,7 @@ async function editOrSend(bot, chatId, msgId, text, options) {
     try {
         await bot.editMessageText(text, { chat_id: chatId, message_id: msgId, ...options });
     } catch (error) {
+        // If edit fails, send new message
         await bot.sendMessage(chatId, text, options);
     }
 }
@@ -31,7 +32,6 @@ const handleCallback = async (bot, callbackQuery) => {
 
     // --- Admin Approval Logic ---
     if (data.startsWith('admin_approve_') || data.startsWith('admin_reject_')) {
-        // ... (This logic is correct and unchanged) ...
         if (!ADMIN_CHAT_ID || from.id.toString() !== ADMIN_CHAT_ID) {
             return bot.answerCallbackQuery(callbackQuery.id, "You are not authorized for this action.", true);
         }
@@ -46,9 +46,14 @@ const handleCallback = async (bot, callbackQuery) => {
             await bot.editMessageText(msg.text + "\n\nError: This transaction has already been processed.", { chat_id: chatId, message_id: msgId });
             return bot.answerCallbackQuery(callbackQuery.id);
         }
+        
         const txUser = tx.User;
+        // --- THIS IS THE FIX ---
+        // Set locale to the *user's* language before sending notification
         i18n.setLocale(txUser.language);
         const __ = i18n.__;
+        // --- END OF FIX ---
+
         const t = await sequelize.transaction();
         try {
             if (action === 'approve') {
@@ -60,7 +65,7 @@ const handleCallback = async (bot, callbackQuery) => {
                 await bot.editMessageText(msg.text + `\n\nApproved by ${from.first_name}`, {
                     chat_id: chatId, message_id: msgId, reply_markup: null
                 });
-                await bot.sendMessage(txUser.telegramId, __("withdraw.notify_user_approved", tx.amount));
+                await bot.sendMessage(txUser.telegramId, __("withdraw.notify_user_approved", tx.amount.toFixed(2))); // Pass formatted amount
             } else if (action === 'reject') {
                 tx.status = 'failed';
                 await tx.save({ transaction: t });
@@ -70,7 +75,7 @@ const handleCallback = async (bot, callbackQuery) => {
                 await bot.editMessageText(msg.text + `\n\nRejected by ${from.first_name}`, {
                     chat_id: chatId, message_id: msgId, reply_markup: null
                 });
-                await bot.sendMessage(txUser.telegramId, __("withdraw.notify_user_rejected", tx.amount));
+                await bot.sendMessage(txUser.telegramId, __("withdraw.notify_user_rejected", tx.amount.toFixed(2))); // Pass formatted amount
             }
         } catch (e) {
             await t.rollback();
@@ -82,14 +87,9 @@ const handleCallback = async (bot, callbackQuery) => {
     
     // --- End of Admin Logic ---
 
-    // --- THIS IS THE LANGUAGE FIX ---
-    // Set locale *after* language change, or define `__` *inside* the if block.
-    // We will do the latter.
-    
-    // Set default locale for THIS action
+    // Set locale for the user who clicked the button
     i18n.setLocale(user.language);
     let __ = i18n.__;
-    // --- END OF FIX ---
 
     try {
         // --- Language Selection ---
@@ -97,13 +97,12 @@ const handleCallback = async (bot, callbackQuery) => {
             user.language = data.split('_')[2];
             await user.save();
             
-            // --- FIX: Re-define `__` with the NEW language ---
+            // Re-set locale with the NEW language
             i18n.setLocale(user.language);
             __ = i18n.__;
-            // --- END OF FIX ---
             
             await bot.deleteMessage(chatId, msgId);
-            await bot.sendMessage(chatId, __("language_set", from.first_name), {
+            await bot.sendMessage(chatId, __("language_set", __("language_name"), from.first_name), { // Use "language_name" key
                 reply_markup: getMainMenuKeyboard(user)
             });
 
@@ -120,6 +119,7 @@ const handleCallback = async (bot, callbackQuery) => {
             await user.save();
             const text = __("main_menu_title", from.first_name);
             await editOrSend(bot, chatId, msgId, text, { reply_markup: undefined });
+            // Send a new message to show the main keyboard
             await bot.sendMessage(chatId, __("main_menu_title", from.first_name), {
                 reply_markup: getMainMenuKeyboard(user)
             });
@@ -127,9 +127,12 @@ const handleCallback = async (bot, callbackQuery) => {
         
         // --- Show Investment Plans ---
         else if (data === 'show_invest_plans') {
-             const text = __("plans.title") + "\n\n" + __("common.balance", user.mainBalance);
+             // --- THIS IS THE FIX ---
+             // Pass the mainBalance to the "common.balance" key
+             const text = __("plans.title") + "\n\n" + __("common.balance", user.mainBalance.toFixed(2));
+             // --- END OF FIX ---
              await editOrSend(bot, chatId, msgId, text, {
-                reply_markup: getInvestmentPlansKeyboard(user)
+                reply_markup: getInvestmentPlansKeyboard(user) // This now correctly uses the user's language
             });
         }
 
@@ -142,9 +145,16 @@ const handleCallback = async (bot, callbackQuery) => {
             user.stateContext = { planId: plan.id };
             await user.save();
             
+            // --- THIS IS THE FIX ---
+            // Pass the formatted mainBalance as the 5th argument
             const text = __("plans.details", 
-                plan.percent, plan.hours, plan.min, plan.max, __("common.balance", user.mainBalance)
+                plan.percent, 
+                plan.hours, 
+                plan.min, 
+                plan.max, 
+                __("common.balance", user.mainBalance.toFixed(2)) // Pass formatted balance
             );
+            // --- END OF FIX ---
             await editOrSend(bot, chatId, msgId, text, {
                 reply_markup: getCancelKeyboard(user)
             });
@@ -189,7 +199,7 @@ const handleCallback = async (bot, callbackQuery) => {
             }
 
             if (user.mainBalance < MIN_WITHDRAWAL) { 
-                return bot.answerCallbackQuery(callbackQuery.id, __("withdraw.min_error", MIN_WITHDRAWAL), true);
+                return bot.answerCallbackQuery(callbackQuery.id, __("withdraw.min_error", MIN_WITHDRAWAL.toFixed(2)), true);
             }
             if (!user.walletAddress) {
                 user.state = 'awaiting_wallet_address';
@@ -201,7 +211,10 @@ const handleCallback = async (bot, callbackQuery) => {
                 user.state = 'awaiting_withdrawal_amount';
                 await user.save();
                 const text = __("withdraw.ask_amount", 
-                    user.walletAddress, user.walletNetwork.toUpperCase(), __("common.balance", user.mainBalance), MIN_WITHDRAWAL
+                    user.walletAddress, 
+                    user.walletNetwork.toUpperCase(), 
+                    __("common.balance", user.mainBalance.toFixed(2)), // Pass formatted balance
+                    MIN_WITHDRAWAL.toFixed(2)
                 );
                 await editOrSend(bot, chatId, msgId, text, {
                     reply_markup: getCancelKeyboard(user)
@@ -223,7 +236,7 @@ const handleCallback = async (bot, callbackQuery) => {
             user.stateContext = {};
             await user.save();
             
-            const text = __("withdraw.wallet_set_success", user.walletAddress, network.toUpperCase(), MIN_WITHDRAWAL);
+            const text = __("withdraw.wallet_set_success", user.walletAddress, network.toUpperCase(), MIN_WITHDRAWAL.toFixed(2));
             await editOrSend(bot, chatId, msgId, text, {
                 reply_markup: getCancelKeyboard(user)
             });
@@ -244,7 +257,7 @@ const handleCallback = async (bot, callbackQuery) => {
             let text = __("transactions.title") + "\n\n";
             txs.forEach(tx => {
                 const date = tx.createdAt.toLocaleDateString('en-GB');
-                text += __("transactions.entry", date, tx.type, tx.amount, tx.status) + "\n";
+                text += __("transactions.entry", date, tx.type, tx.amount.toFixed(2), tx.status) + "\n";
             });
             await editOrSend(bot, chatId, msgId, text, {
                 reply_markup: getBackKeyboard(user, "back_to_main")
