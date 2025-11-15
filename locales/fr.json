@@ -1,12 +1,14 @@
 {
 "welcome": "Bienvenue ! Veuillez sélectionner votre langue.",
-"language_set": "Langue définie sur Français. Bienvenue, %s !",
+"language_name": "Français",
+"language_set": "Langue définie sur %s. Bienvenue, %s !",
+"welcome_bonus_message": "En tant que nouvel utilisateur, un bonus de bienvenue de %.2f USDT a été ajouté à votre solde de bonus ! Ce bonus peut être retiré après votre premier investissement.",
 "main_menu_title": "Menu Principal\n\nBon retour parmi nous, %s !",
 "error_generic": "Une erreur est survenue. Veuillez réessayer ou contacter le support.",
 "common": {
 "back": "Retour",
 "cancel": "Annuler",
-"balance": "Votre solde : %.2f USDT"
+"balance": "Votre Solde Principal : %.2f USDT"
 },
 "menu": {
 "make_investment": "Faire un Investissement",
@@ -18,15 +20,15 @@
 },
 "plans": {
 "title": "Choisissez un plan d'investissement :",
-"plan_1_button": "Plan 1 : 15%% pendant 24 heures",
-"plan_2_button": "Plan 2 : 20%% pendant 72 heures",
-"plan_3_button": "Plan 3 : 27%% pendant 7 jours",
-"plan_4_button": "Plan 4 : 32%% pendant 30 jours",
-"details": "Détails du Plan :\nProfit : %s%%\nDurée : %s heures\nLimites : %s - %s USDT\n\n%s\n\nVeuillez saisir le montant que vous souhaitez investir :",
-"invest_success": "Succès ! Vous avez investi %.2f USDT dans le plan %s. Il arrivera à échéance dans %s heures.",
-"err_min_amount": "L'investissement minimum est de %s USDT.",
-"err_max_amount": "L'investissement maximum est de %s USDT.",
-"err_insufficient_funds": "Fonds insuffisants. Votre solde est de %.2f USDT.",
+"plan_1_button": "Plan 1 : 5%% pendant 24 heures (5 - 50 USDT)",
+"plan_2_button": "Plan 2 : 15%% pendant 72 heures (10 - 200 USDT)",
+"plan_3_button": "Plan 3 : 20%% pendant 7 jours (10 - 1000 USDT)",
+"plan_4_button": "Plan 4 : 30%% pendant 30 jours (10 - 10000 USDT)",
+"details": "Détails du Plan :\nProfit : %s%%\nDurée : %s heures\nLimites : %s - %s USDT\n\n%s\n\nVeuillez saisir le montant que vous souhaitez investir (depuis votre Solde Principal) :",
+"invest_success": "Succès ! Vous avez investi %.2f USDT dans le %s. Les profits seront payés automatiquement après %s heures.",
+"err_min_amount": "L'investissement minimum pour ce plan est de %s USDT.",
+"err_max_amount": "L'investissement maximum pour ce plan est de %s USDT.",
+"err_insufficient_funds": "Fonds insuffisants. Votre solde principal est de %.2f USDT.",
 "err_invalid_amount": "Veuillez saisir un nombre valide."
 },
 "investments": {
@@ -35,22 +37,22 @@
 "investment_entry": "Plan : %s%% pendant %s heures\nMontant : %.2f USDT\nProfit : %.2f USDT\nExpire dans : %s"
 },
 "balance": {
-"title": "Mon Solde\n\nSolde Principal : %.2f USDT\nTotal Investi : %.2f USDT\nTotal Retiré : %.2f USDT",
+"title": "Mon Solde\n\nSolde Principal : %.2f USDT\nSolde Bonus : %.2f USDT\n\nTotal Investi : %.2f USDT\nTotal Retiré : %.2f USDT",
 "deposit": "Déposer",
 "withdraw": "Retirer",
 "transactions": "Historique des Transactions"
 },
 "deposit": {
-"ask_amount": "Veuillez saisir le montant que vous souhaitez déposer (Min : %s USDT) :",
-"min_error": "Le dépôt minimum est de %s USDT.",
-"invoice_created": "<b>Facture Crypto Créée</b>\n\nMontant: <b>$%.2f USD</b>\n\nVeuillez cliquer sur le bouton ci-dessous pour choisir votre devise (BTC, USDT, etc) et payer.\n\n<i>Votre solde sera crédité automatiquement une fois le réseau confirmé la transaction.</i>",
-"pay_button": "Cliquez pour payer en Crypto",
+"ask_amount": "Veuillez saisir le montant que vous souhaitez déposer (Min : 10 USDT) :",
+"min_error": "Le dépôt minimum est de 10 USDT.",
+"invoice_created": "<b>Facture BEP20 Créée</b>\n\nMontant: <b>$%.2f USD</b>\n\nVeuillez cliquer sur le bouton ci-dessous pour payer avec USDT (BEP20).\n\n<i>Votre solde sera crédité automatiquement une fois le réseau confirmé la transaction.</i>",
+"pay_button": "Cliquez pour payer (BEP20 Uniquement)",
 "api_error": "Impossible de créer une facture de dépôt. Veuillez réessayer plus tard.",
-"ipn_success": "Votre dépôt de %s USDT a été confirmé et ajouté à votre solde !"
+"ipn_success": "Votre dépôt de %.2f USDT a été confirmé et ajouté à votre solde principal !"
 },
 "withdraw": {
 "min_error": "Le retrait minimum est de %.2f USDT.",
-"insufficient_funds": "Fonds insuffisants. Vous n'avez que %.2f USDT à retirer.",
+"insufficient_funds": "Fonds insuffisants. Vous n'avez que %.2f USDT sur votre solde principal à retirer.",
 "ask_wallet": "Veuillez saisir l'adresse de votre portefeuille USDT (TRC20 ou BEP20) :",
 "ask_network": "Est-ce une adresse TRC20 (Tron) ou BEP20 (BSC) ?",
 "wallet_set_success": "Adresse du portefeuille définie sur : %s (%s)\n\nMaintenant, veuillez saisir le montant que vous souhaitez retirer (Min : %s USDT) :",
@@ -62,7 +64,8 @@
 "admin_approve": "Approuver",
 "admin_reject": "Rejeter",
 "notify_user_approved": "Votre demande de retrait de %.2f USDT a été approuvée et traitée.",
-"notify_user_rejected": "Votre demande de retrait de %.2f USDT a été rejetée. Le montant a été retourné sur votre solde."
+"notify_user_rejected": "Votre demande de retrait de %.2f USDT a été rejetée. Le montant a été retourné sur votre solde principal.",
+"bonus_unlocked": "Votre bonus de %.2f USDT a été débloqué et ajouté à votre solde principal ! Il est maintenant disponible pour le retrait."
 },
 "transactions": {
 "title": "Historique des Transactions",
@@ -77,13 +80,17 @@
 "earnings_title": "Gains de parrainage :"
 },
 "faq": {
-"title": "Questions Fréquemment Posées",
-"link_text": "Informations détaillées :",
-"button_text": "Lire les Informations",
-"url": "https://telegra.ph/Information-on-Working-with-the-Bot-10-17"
+"title": "Foire Aux Questions",
+"link_text": "Cliquez sur le bouton ci-dessous pour lire notre guide détaillé :",
+"button_text": "Ouvrir la FAQ",
+"url": "https://telegra.ph/Information-on-Working-with-the-Bot-11-15-2"
 },
 "support": {
 "title": "Support\n\nPour une assistance technique ou toute demande, veuillez contacter notre admin : @%s"
 },
-"action_canceled": "Action annulée."
+"action_canceled": "Action annulée.",
+"admin": {
+"add_balance_user": "Un administrateur a ajouté %.2f USDT à votre solde principal.\nVotre nouveau solde principal est %.2f USDT.",
+"remove_balance_user": "Un administrateur a retiré %.2f USDT de votre solde principal.\nVotre nouveau solde principal est %.2f USDT."
+}
 }
