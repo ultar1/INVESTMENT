@@ -3,9 +3,11 @@ const i18n = require('../services/i18n');
 const { 
     NOWPAYMENTS_API_KEY, 
     NOWPAYMENTS_IPN_SECRET, 
-    WEBHOOK_DOMAIN 
+    WEBHOOK_DOMAIN,
+    BOT_TOKEN
 } = require('../config');
 const { sequelize, User, Transaction } = require('../models');
+const TelegramBot = require('node-telegram-bot-api');
 
 // Initialize NowPayments
 const np = new NowPayments({ apiKey: NOWPAYMENTS_API_KEY });
@@ -31,56 +33,8 @@ const generateDepositInvoice = async (user, amount) => {
 };
 
 /**
- * Processes a withdrawal request via NowPayments
- */
-const requestWithdrawal = async (user, amount) => {
-    const currency = user.walletNetwork === 'trc20' ? 'usdt.trc20' : 'usdt.bep20';
-
-    // Use a transaction to ensure balance is only debited if API call is queued
-    const t = await sequelize.transaction();
-    try {
-        // 1. Debit user balance
-        user.balance -= amount;
-        user.totalWithdrawn += amount;
-        await user.save({ transaction: t });
-
-        // 2. Create pending transaction
-        const tx = await Transaction.create({
-            user: user.id,
-            type: 'withdrawal',
-            amount: amount,
-            status: 'pending', // Pending until NowPayments confirms
-            walletAddress: user.walletAddress
-        }, { transaction: t });
-
-        // 3. Call NowPayments API
-        // NOTE: We use batch-payouts for withdrawals.
-        // This is safer. We'll create a payout request.
-        const payout = await np.createPayout({
-            address: user.walletAddress,
-            currency: currency,
-            amount: amount,
-            ipn_callback_url: `${WEBHOOK_DOMAIN}/payment-ipn`
-            // batch_withdrawal_id can be tx.id
-        });
-
-        // 4. Update transaction with payout ID
-        tx.txId = payout.id; // Save NowPayments payout ID
-        await tx.save({ transaction: t });
-
-        // 5. Commit
-        await t.commit();
-        return { success: true };
-        
-    } catch (error) {
-        await t.rollback(); // Rollback balance change if API fails
-        console.error("NowPayments createPayout error:", error.message);
-        return { success: false, error: error.message };
-    }
-};
-
-/**
  * Handles incoming IPN webhooks from NowPayments
+ * This now only processes deposits and manual payout confirmations
  */
 const handleNowPaymentsIPN = async (req, res) => {
     // 1. Verify the IPN
@@ -130,8 +84,14 @@ const handleNowPaymentsIPN = async (req, res) => {
             await t.commit();
             
             // Notify user
-            i18n.setLocale(user.language);
-            bot.sendMessage(user.telegramId, i18n.__('deposit.ipn_success', depositedAmount));
+            try {
+                // Re-initialize bot instance to send message
+                const bot = new TelegramBot(BOT_TOKEN);
+                i18n.setLocale(user.language);
+                await bot.sendMessage(user.telegramId, i18n.__('deposit.ipn_success', depositedAmount));
+            } catch (notifyError) {
+                console.error("Failed to notify user of deposit:", notifyError);
+            }
             
         } catch (e) {
             await t.rollback();
@@ -140,28 +100,39 @@ const handleNowPaymentsIPN = async (req, res) => {
     }
     
     // --- Handle WITHDRAWAL confirmation ---
+    // This will catch payouts you manually process via NowPayments dashboard
     if (type === 'payout' && (payment_status === 'finished' || payment_status === 'failed')) {
         const tx = await Transaction.findOne({ where: { txId: id } }); // 'id' is used for payout
-        if (!tx || tx.status !== 'pending') {
+        
+        if (!tx) {
+             // This might be a payout not initiated by our bot, safe to ignore
+             console.log(`IPN for unknown payout ${id} received.`);
+             return res.status(200).send('OK');
+        }
+
+        if (tx.status !== 'pending') {
             console.log(`IPN for payout ${id} already processed.`);
             return res.status(200).send('OK');
         }
 
         if (payment_status === 'finished') {
             tx.status = 'completed';
-            await tx.save();
-            // User was already debited, just confirm
+            // Find user just to update totalWithdrawn
+            const user = await User.findByPk(tx.userId);
+            if(user) {
+                user.totalWithdrawn += tx.amount;
+                await user.save();
+            }
         } else if (payment_status === 'failed') {
-            // Payout failed. Refund the user.
+            tx.status = 'failed';
+            // Refund user
             const user = await User.findByPk(tx.userId);
             if(user) {
                 user.balance += tx.amount; // Add money back
-                user.totalWithdrawn -= tx.amount;
                 await user.save();
             }
-            tx.status = 'failed';
-            await tx.save();
         }
+        await tx.save();
     }
 
     res.status(200).send('IPN processed.');
@@ -170,6 +141,5 @@ const handleNowPaymentsIPN = async (req, res) => {
 
 module.exports = { 
     generateDepositInvoice,
-    requestWithdrawal,
     handleNowPaymentsIPN
 };
