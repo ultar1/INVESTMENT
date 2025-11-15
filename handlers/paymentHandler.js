@@ -12,20 +12,19 @@ const TelegramBot = require('node-telegram-bot-api');
 const NOWPAYMENTS_API_URL = "https://api.nowpayments.io/v1";
 
 /**
- * Creates a generic USD deposit invoice via NowPayments API
+ * Creates a BEP20-ONLY deposit invoice
  * @param {object} user - The user object
  * @param {number} amount - The amount in USD
  */
 const generateDepositInvoice = async (user, amount) => {
     
     // --- THIS IS THE FIX ---
-    // We REMOVE pay_currency.
-    // This creates a generic invoice where the user
-    // selects the coin/network on the NowPayments page.
+    // We are now hardcoding the pay_currency to 'USDTBSC',
+    // which is the correct API code for USDT on BEP20.
     const body = {
         price_amount: amount,
         price_currency: 'usd',
-        // pay_currency is intentionally removed
+        pay_currency: 'USDTBSC', // <-- The correct code
         order_id: `user_${user.id}_${Date.now()}`,
         ipn_callback_url: `${WEBHOOK_DOMAIN}/payment-ipn`
     };
@@ -48,8 +47,7 @@ const generateDepositInvoice = async (user, amount) => {
             return null;
         }
         
-        // We now return the full payment object,
-        // which includes the 'invoice_url'
+        // Return the full payment object
         return payment;
 
     } catch (error) {
@@ -60,6 +58,7 @@ const generateDepositInvoice = async (user, amount) => {
 
 /**
  * Verifies the IPN signature from NowPayments.
+ * (This function is unchanged)
  */
 function verifyIPN(body, signature, secret) {
     try {
@@ -80,9 +79,9 @@ function verifyIPN(body, signature, secret) {
 
 /**
  * Handles incoming IPN webhooks from NowPayments
+ * (This function is unchanged)
  */
 const handleNowPaymentsIPN = async (req, res) => {
-    // (This function is unchanged from the previous version)
     
     // 1. Verify the IPN
     const signature = req.headers['x-nowpayments-sig'];
@@ -148,7 +147,6 @@ const handleNowPaymentsIPN = async (req, res) => {
     
     // --- Handle WITHDRAWAL confirmation ---
     if (type === 'payout' && (payment_status === 'finished' || payment_status === 'failed')) {
-        // (This logic remains the same for manual dashboard payouts)
         const tx = await Transaction.findOne({ where: { txId: id } });
         if (!tx || tx.status !== 'pending') {
             console.log(`IPN for payout ${id} already processed or not found.`);
