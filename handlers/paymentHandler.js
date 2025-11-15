@@ -1,4 +1,4 @@
-const NowPayments = require('nowpayments-api-v1');
+// We can't use `require` for the new package. We will use dynamic `import()`
 const i18n = require('../services/i18n');
 const { 
     NOWPAYMENTS_API_KEY, 
@@ -9,14 +9,21 @@ const {
 const { sequelize, User, Transaction } = require('../models');
 const TelegramBot = require('node-telegram-bot-api');
 
-// Initialize NowPayments
-const np = new NowPayments({ apiKey: NOWPAYMENTS_API_KEY });
+// Helper function to initialize the NowPayments (NP) class
+// This is needed because 'nowpayments-api-js' is an ES Module
+async function getNowPayments() {
+    // Dynamically import the ESM package
+    const { default: NowPayments } = await import('nowpayments-api-js');
+    // Initialize with your API key
+    return new NowPayments({ apiKey: NOWPAYMENTS_API_KEY });
+}
 
 /**
  * Creates a deposit invoice via NowPayments
  */
 const generateDepositInvoice = async (user, amount) => {
     try {
+        const np = await getNowPayments(); // Get NP instance
         const payment = await np.createPayment({
             price_amount: amount,
             price_currency: 'usd',
@@ -27,21 +34,22 @@ const generateDepositInvoice = async (user, amount) => {
         
         return payment;
     } catch (error) {
-        console.error("NowPayments createPayment error:", error.message);
+        console.error("NowPayments createPayment error:", error.response ? error.response.data : error.message);
         return null;
     }
 };
 
 /**
  * Handles incoming IPN webhooks from NowPayments
- * This now only processes deposits and manual payout confirmations
  */
 const handleNowPaymentsIPN = async (req, res) => {
     // 1. Verify the IPN
     const signature = req.headers['x-nowpayments-sig'];
     if (!signature) return res.status(401).send("No signature.");
     
+    let np;
     try {
+        np = await getNowPayments(); // Get NP instance for verification
         const isValid = np.verifyIPN(req.body, signature, NOWPAYMENTS_IPN_SECRET);
         if (!isValid) {
             console.warn("Invalid NowPayments IPN signature.");
@@ -100,12 +108,10 @@ const handleNowPaymentsIPN = async (req, res) => {
     }
     
     // --- Handle WITHDRAWAL confirmation ---
-    // This will catch payouts you manually process via NowPayments dashboard
     if (type === 'payout' && (payment_status === 'finished' || payment_status === 'failed')) {
         const tx = await Transaction.findOne({ where: { txId: id } }); // 'id' is used for payout
         
         if (!tx) {
-             // This might be a payout not initiated by our bot, safe to ignore
              console.log(`IPN for unknown payout ${id} received.`);
              return res.status(200).send('OK');
         }
@@ -117,7 +123,6 @@ const handleNowPaymentsIPN = async (req, res) => {
 
         if (payment_status === 'finished') {
             tx.status = 'completed';
-            // Find user just to update totalWithdrawn
             const user = await User.findByPk(tx.userId);
             if(user) {
                 user.totalWithdrawn += tx.amount;
@@ -125,7 +130,6 @@ const handleNowPaymentsIPN = async (req, res) => {
             }
         } else if (payment_status === 'failed') {
             tx.status = 'failed';
-            // Refund user
             const user = await User.findByPk(tx.userId);
             if(user) {
                 user.balance += tx.amount; // Add money back
