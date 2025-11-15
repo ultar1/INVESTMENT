@@ -1,0 +1,80 @@
+{
+	"welcome": "🇬🇧 Welcome! Please select your language.",
+	"language_set": "Language set to English. Welcome, %s!",
+	"main_menu_title": "👤 Main Menu\n\nWelcome back, %s!",
+	"error_generic": "An error occurred. Please try again or contact support.",
+	"common": {
+		"back": "⬅️ Back",
+		"cancel": "❌ Cancel",
+		"balance": "Your balance: %.2f USDT"
+	},
+	"menu": {
+		"make_investment": "📈 Make Investment",
+		"my_investments": "📊 My Investments",
+		"my_balance": "💰 My Balance",
+		"referral_program": "👥 Referral Program",
+		"faq": "❓ FAQ",
+		"support": "📞 Support"
+	},
+	"plans": {
+		"title": "📈 Choose an investment plan:",
+		"plan_1_button": "Plan 1: 15%% for 24 hours",
+		"plan_2_button": "Plan 2: 20%% for 72 hours",
+		"plan_3_button": "Plan 3: 27%% for 7 days",
+		"plan_4_button": "Plan 4: 32%% for 30 days",
+		"details": "Plan Details:\nProfit: %s%%\nDuration: %s hours\nLimits: %s - %s USDT\n\n%s\n\nPlease enter the amount you wish to invest:",
+		"invest_success": "✅ Success! You have invested %.2f USDT in the %s plan. It will mature in %s hours.",
+		"err_min_amount": "Minimum investment is %s USDT.",
+		"err_max_amount": "Maximum investment is %s USDT.",
+		"err_insufficient_funds": "Insufficient funds. Your balance is %.2f USDT.",
+		"err_invalid_amount": "Please enter a valid number."
+	},
+	"investments": {
+		"title": "📊 My Running Investments",
+		"no_investments": "You have no active investments.\n\nClick the button below to make your first one!",
+		"investment_entry": "Plan: %s%% for %s hours\nAmount: %.2f USDT\nProfit: %.2f USDT\nMatures in: %s"
+	},
+	"balance": {
+		"title": "💰 My Balance\n\nMain Balance: %.2f USDT\nTotal Invested: %.2f USDT\nTotal Withdrawn: %.2f USDT",
+		"deposit": "➕ Deposit",
+		"withdraw": "➖ Withdraw",
+		"transactions": "🔄 Transaction History"
+	},
+	"deposit": {
+		"ask_amount": "Please enter the amount you wish to deposit (Min: %s USDT):",
+		"min_error": "Minimum deposit is %s USDT.",
+		"invoice_created": "Please send exactly **%s USDT** (TRC20/BEP20) to the address below:\n\n`%s`\n\nYour balance will be credited automatically after payment is confirmed. This invoice is valid for 24 hours.",
+		"api_error": "Could not create a deposit invoice. Please try again later.",
+		"ipn_success": "✅ Your deposit of %s USDT has been confirmed and added to your balance!"
+	},
+	"withdraw": {
+		"min_error": "Minimum withdrawal is %.2f USDT.",
+		"insufficient_funds": "Insufficient funds. You only have %.2f USDT to withdraw.",
+		"ask_wallet": "Please enter your USDT (TRC20 or BEP20) wallet address:",
+		"ask_network": "Is this a TRC20 (Tron) or BEP20 (BSC) address?",
+		"wallet_set_success": "✅ Wallet address set to: %s (%s)\n\nNow, please enter the amount you wish to withdraw (Min: %s USDT):",
+		"ask_amount": "Your wallet: %s (%s)\n%s\n\nPlease enter the amount you wish to withdraw (Min: %s USDT):",
+		"request_success": "✅ Your withdrawal request for %.2f USDT has been submitted and is being processed by our payment provider.",
+		"request_failed": "❌ Withdrawal Error: %s. Please contact support if this persists.",
+		"invalid_wallet": "Invalid wallet address. Please try again."
+	},
+	"transactions": {
+		"title": "🔄 Transaction History",
+		"no_transactions": "You have no transactions yet.",
+		"entry": "%s | %s | %.2f USDT | Status: %s"
+	},
+	"referral": {
+		"title": "👥 Referral Program",
+		"link": "🔗 Your referral link:\n`%s`",
+		"conditions": "💰 Program conditions:\n🥇 Level 1: %s%%\n🥈 Level 2: %s%%\n🥉 Level 3: %s%%",
+		"stats_all": "📊 All-time statistics:\n👥 Total referrals: %s\n├ Level 1: %s\n├ Level 2: %s\n└ Level 3: %s",
+		"earnings": "💎 Referral earnings:\n📊 Total earned: %.2f USDT"
+	},
+	"faq": {
+		"title": "❓ Frequently Asked Questions\n\n(Admin: Add your FAQ content here)"
+	},
+	"support": {
+		"title": "📞 Support\n\nFor technical support or any inquiries, please contact our admin: @%s"
+	},
+	"action_canceled": "Action canceled."
+}
