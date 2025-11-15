@@ -17,13 +17,14 @@ async function editOrSend(bot, chatId, msgId, text, options) {
     try {
         await bot.editMessageText(text, { chat_id: chatId, message_id: msgId, ...options });
     } catch (error) {
-        // If message is not modified or deleted, send a new one
         await bot.sendMessage(chatId, text, options);
     }
 }
 
+// --- THIS IS THE FIX ---
 // Accept `user` and `__` (language function) as arguments
 const handleCallback = async (bot, callbackQuery, user, __) => {
+// --- END OF FIX ---
     const msg = callbackQuery.message;
     const chatId = msg.chat.id;
     const msgId = msg.message_id;
@@ -90,6 +91,8 @@ const handleCallback = async (bot, callbackQuery, user, __) => {
     
     // --- End of Admin Logic ---
 
+    // const __ = i18n.__; // <-- REMOVED! We use the one passed from index.js
+
     try {
         // --- Language Selection ---
         if (data.startsWith('set_lang_')) {
@@ -102,13 +105,11 @@ const handleCallback = async (bot, callbackQuery, user, __) => {
             
             await bot.deleteMessage(chatId, msgId);
             await bot.sendMessage(chatId, new__("language_set", new__("language_name"), from.first_name), {
-                reply_markup: getMainMenuKeyboard(user)
+                reply_markup: getMainMenuKeyboard(user, new__) // Pass `new__`
             });
 
             if (user.stateContext && user.stateContext.isNewUser) {
-                // Read the bonus from the config and format it
-                const bonusText = toFixedSafe(WELCOME_BONUS);
-                await bot.sendMessage(chatId, new__("welcome_bonus_message", bonusText));
+                await bot.sendMessage(chatId, new__("welcome_bonus_message", toFixedSafe(WELCOME_BONUS)));
                 user.stateContext = {};
                 await user.save();
             }
@@ -121,7 +122,7 @@ const handleCallback = async (bot, callbackQuery, user, __) => {
             const text = __("main_menu_title", from.first_name);
             await editOrSend(bot, chatId, msgId, text, { reply_markup: undefined });
             await bot.sendMessage(chatId, __("main_menu_title", from.first_name), {
-                reply_markup: getMainMenuKeyboard(user)
+                reply_markup: getMainMenuKeyboard(user, __) // Pass `__`
             });
         }
         
@@ -130,7 +131,7 @@ const handleCallback = async (bot, callbackQuery, user, __) => {
              const balanceText = toFixedSafe(user.mainBalance);
              const text = __("plans.title") + "\n\n" + __("common.balance", balanceText);
              await editOrSend(bot, chatId, msgId, text, {
-                reply_markup: getInvestmentPlansKeyboard(user)
+                reply_markup: getInvestmentPlansKeyboard(user, __) // Pass `__`
             });
         }
 
@@ -152,7 +153,7 @@ const handleCallback = async (bot, callbackQuery, user, __) => {
                 __("common.balance", balanceText)
             );
             await editOrSend(bot, chatId, msgId, text, {
-                reply_markup: getCancelKeyboard(user)
+                reply_markup: getCancelKeyboard(user, __) // Pass `__`
             });
         }
 
@@ -163,7 +164,7 @@ const handleCallback = async (bot, callbackQuery, user, __) => {
             await user.save();
             await editOrSend(bot, chatId, msgId, __("action_canceled"), { reply_markup: undefined });
             await bot.sendMessage(chatId, __("main_menu_title", from.first_name), {
-                reply_markup: getMainMenuKeyboard(user)
+                reply_markup: getMainMenuKeyboard(user, __) // Pass `__`
             });
         }
 
@@ -172,7 +173,7 @@ const handleCallback = async (bot, callbackQuery, user, __) => {
             user.state = 'awaiting_deposit_amount';
             await user.save();
             await editOrSend(bot, chatId, msgId, __("deposit.ask_amount", MIN_DEPOSIT), { 
-                reply_markup: getCancelKeyboard(user) 
+                reply_markup: getCancelKeyboard(user, __) // Pass `__`
             });
         }
         
@@ -204,7 +205,7 @@ const handleCallback = async (bot, callbackQuery, user, __) => {
                 user.state = 'awaiting_wallet_address';
                 await user.save();
                 await editOrSend(bot, chatId, msgId, __("withdraw.ask_wallet"), {
-                    reply_markup: getCancelKeyboard(user)
+                    reply_markup: getCancelKeyboard(user, __) // Pass `__`
                 });
             } else {
                 user.state = 'awaiting_withdrawal_amount';
@@ -218,7 +219,7 @@ const handleCallback = async (bot, callbackQuery, user, __) => {
                     minWithdrawalText
                 );
                 await editOrSend(bot, chatId, msgId, text, {
-                    reply_markup: getCancelKeyboard(user)
+                    reply_markup: getCancelKeyboard(user, __) // Pass `__`
                 });
             }
         }
@@ -240,7 +241,7 @@ const handleCallback = async (bot, callbackQuery, user, __) => {
             const minWithdrawalText = toFixedSafe(MIN_WITHDRAWAL);
             const text = __("withdraw.wallet_set_success", user.walletAddress, network.toUpperCase(), minWithdrawalText);
             await editOrSend(bot, chatId, msgId, text, {
-                reply_markup: getCancelKeyboard(user)
+                reply_markup: getCancelKeyboard(user, __) // Pass `__`
             });
         }
         
@@ -253,7 +254,7 @@ const handleCallback = async (bot, callbackQuery, user, __) => {
             });
             if (txs.length === 0) {
                 return editOrSend(bot, chatId, msgId, __("transactions.no_transactions"), {
-                    reply_markup: getBackKeyboard(user, "back_to_main")
+                    reply_markup: getBackKeyboard(user, "back_to_main", __) // Pass `__`
                 });
             }
             let text = __("transactions.title") + "\n\n";
@@ -262,7 +263,7 @@ const handleCallback = async (bot, callbackQuery, user, __) => {
                 text += __("transactions.entry", date, tx.type, toFixedSafe(tx.amount), tx.status) + "\n";
             });
             await editOrSend(bot, chatId, msgId, text, {
-                reply_markup: getBackKeyboard(user, "back_to_main")
+                reply_markup: getBackKeyboard(user, "back_to_main", __) // Pass `__`
             });
         }
 
