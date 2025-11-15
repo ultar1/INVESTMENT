@@ -43,7 +43,8 @@
 "deposit": {
 "ask_amount": "Please enter the amount you wish to deposit (Min: %s USDT):",
 "min_error": "Minimum deposit is %s USDT.",
-"invoice_created": "To deposit <b>%s USDT</b>, please send <b>USDT (BEP20)</b> to the following address:\n\n%s\n\nYour balance will be credited automatically after payment is confirmed. This invoice is valid for 24 hours.",
+"invoice_created": "<b>Crypto Invoice Created</b>\n\nAmount: <b>$%.2f USD</b>\n\nPlease click the button below to choose your coin (BTC, USDT, etc) and pay.\n\n<i>Your balance will be credited automatically once the network confirms the transaction.</i>",
+"pay_button": "Click to Pay Crypto",
 "api_error": "Could not create a deposit invoice. Please try again later.",
 "ipn_success": "Your deposit of %s USDT has been confirmed and added to your balance!"
 },
@@ -76,7 +77,10 @@
 "earnings_title": "Referral earnings:"
 },
 "faq": {
-"title": "Frequently Asked Questions\n\n(Admin: Add your FAQ content here)"
+"title": "Frequently Asked Questions",
+"link_text": "Detailed information:",
+"button_text": "Read Information",
+"url": "https://telegra.ph/Information-on-Working-with-the-Bot-10-17"
 },
 "support": {
 "title": "Support\n\nFor technical support or any inquiries, please contact our admin: @%s"
