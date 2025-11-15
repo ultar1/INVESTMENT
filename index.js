@@ -44,7 +44,11 @@ app.post(`/bot${BOT_TOKEN}`, (req, res) => {
 
 // --- NowPayments IPN Webhook Endpoint ---
 app.post('/payment-ipn', async (req, res) => {
-    await handleNowPaymentsIPN(req, res);
+    // --- THIS IS THE FIX ---
+    // Pass the 'bot' instance to the IPN handler
+    // so it can send messages in the user's language.
+    await handleNowPaymentsIPN(req, res, bot);
+    // --- END OF FIX ---
 });
 
 // --- Health Check Endpoint ---
@@ -135,25 +139,30 @@ bot.on('callback_query', async (callbackQuery) => {
 // 3. Text Messages
 bot.on('message', async (msg) => {
     const chatId = msg.chat.id;
-    // --- THIS IS THE FIX ---
-    // Do not ignore commands. Let the admin commands pass through.
     if (msg.text && msg.text.startsWith('/')) {
-        // We only ignore /start because it has its own listener
-        if (msg.text.startsWith('/start')) {
-            return;
-        }
+        if (msg.text.startsWith('/start')) return; // Handled by onText
+        // Let other commands (like /add) fall through
     }
-    // --- END OF FIX ---
+    
     try {
         const user = await User.findOne({ where: { telegramId: msg.from.id } });
         if (!user) {
-            return bot.sendMessage(chatId, "Please start the bot by sending /start");
+            // Only respond to /start if user doesn't exist
+            if (msg.text && msg.text.startsWith('/start')) {
+                // Let the /start listener handle it
+            } else {
+                bot.sendMessage(chatId, "Please start the bot by sending /start");
+            }
+            return;
         }
+        
         notifyAdminOfActivity(msg.from, msg.text);
         i18n.setLocale(user.language);
+
         if (user.state !== 'none' && msg.text) {
             await handleTextInput(bot, msg, user);
-        } else if (msg.text) {
+        } else if (msg.text && !msg.text.startsWith('/')) {
+            // Only handle non-commands
             await handleMessage(bot, msg, user);
         }
     } catch (error) {
@@ -180,8 +189,11 @@ bot.onText(/\/add (\d+\.?\d*) (\d+)/, async (msg, match) => {
 
         await bot.sendMessage(chatId, `Success: Added ${amount} USDT to ${user.firstName} (ID: ${user.telegramId}).\nNew Main Balance: ${user.mainBalance.toFixed(2)} USDT.`);
         
+        // --- THIS IS THE FIX ---
+        // Set locale for user notification
         i18n.setLocale(user.language);
         await bot.sendMessage(user.telegramId, i18n.__('admin.add_balance_user', amount.toFixed(2), user.mainBalance.toFixed(2)));
+        // --- END OF FIX ---
     } catch (error) {
         console.error("Admin /add error:", error);
         await bot.sendMessage(chatId, "Admin: An error occurred.");
@@ -209,8 +221,11 @@ bot.onText(/\/remove (\d+\.?\d*) (\d+)/, async (msg, match) => {
 
         await bot.sendMessage(chatId, `Success: Removed ${amount} USDT from ${user.firstName} (ID: ${user.telegramId}).\nNew Main Balance: ${user.mainBalance.toFixed(2)} USDT.`);
         
+        // --- THIS IS THE FIX ---
+        // Set locale for user notification
         i18n.setLocale(user.language);
         await bot.sendMessage(user.telegramId, i18n.__('admin.remove_balance_user', amount.toFixed(2), user.mainBalance.toFixed(2)));
+        // --- END OF FIX ---
     } catch (error) {
         console.error("Admin /remove error:", error);
         await bot.sendMessage(chatId, "Admin: An error occurred.");
