@@ -10,7 +10,6 @@ function setLocale(user) {
 const getLanguageKeyboard = () => {
     return {
         inline_keyboard: [
-            // --- FIX: Removed flag emojis ---
             [{ text: "English", callback_data: "set_lang_en" }, { text: "Русский", callback_data: "set_lang_ru" }],
             [{ text: "Español", callback_data: "set_lang_es" }, { text: "Français", callback_data: "set_lang_fr" }]
         ]
@@ -41,7 +40,11 @@ const getBalanceKeyboard = (user) => {
 };
 
 const getInvestmentPlansKeyboard = (user) => {
+    // --- THIS IS THE FIX ---
+    // We must set the locale INSIDE this function
+    // to get the correct language for the plan buttons.
     const __ = setLocale(user).__;
+    // --- END OF FIX ---
     return {
         inline_keyboard: [
             [{ text: __('plans.plan_1_button'), callback_data: "invest_plan_1" }],
@@ -53,7 +56,6 @@ const getInvestmentPlansKeyboard = (user) => {
     };
 };
 
-// Renamed for clarity
 const getWithdrawNetworkKeyboard = (user) => {
     const __ = setLocale(user).__;
     return {
@@ -91,7 +93,6 @@ const getMakeInvestmentButton = (user) => {
     };
 }
 
-// For admin withdrawal review
 const getAdminReviewKeyboard = (transactionId, i18nInstance) => {
     const __ = i18nInstance;
     return {
