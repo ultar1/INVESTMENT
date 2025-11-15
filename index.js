@@ -1,8 +1,8 @@
 const express = require('express');
-const bodyParser = 'body-parser';
+const bodyParser = require('body-parser'); // <-- THIS IS THE FIX
 const TelegramBot = require('node-telegram-bot-api');
 const { sequelize } = require('./models');
-const { PORT, BOT_TOKEN, WEBHOOK_DOMAIN, ADMIN_CHAT_ID } = require('./config'); // Added ADMIN_CHAT_ID
+const { PORT, BOT_TOKEN, WEBHOOK_DOMAIN, ADMIN_CHAT_ID } = require('./config');
 const i18n = require('./services/i18n');
 const { registerUser } = require('./handlers/startHandler');
 const { handleMessage } = require('./handlers/messageHandler');
@@ -34,7 +34,7 @@ if (WEBHOOK_DOMAIN) {
 
 // --- Initialize Express Server ---
 const app = express();
-app.use(bodyParser.json());
+app.use(bodyParser.json()); // This line will now work
 
 // --- Bot Webhook Endpoint ---
 app.post(`/bot${BOT_TOKEN}`, (req, res) => {
@@ -52,17 +52,10 @@ app.get('/health', (req, res) => {
     res.status(200).send('OK');
 });
 
-// --- NEW: Helper function for Admin Notifications ---
-/**
- * Sends a non-blocking notification to the admin on user activity.
- * @param {TelegramBot} bot - The bot instance.
- * @param {object} from - The user object from msg.from or callbackQuery.from.
- * @param {string} action - The text of the action (e.g., msg.text).
- */
+// --- Helper function for Admin Notifications ---
 async function notifyAdminOfActivity(bot, from, action) {
-    if (!ADMIN_CHAT_ID) return; // Don't run if no admin ID
+    if (!ADMIN_CHAT_ID) return; 
 
-    // Helper to sanitize text for HTML
     const sanitize = (text) => {
         if (!text) return 'N/A';
         return text.toString().replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -83,10 +76,8 @@ async function notifyAdminOfActivity(bot, from, action) {
     ].join('\n');
 
     try {
-        // Send notification without waiting for it to complete
         bot.sendMessage(ADMIN_CHAT_ID, message, { parse_mode: 'HTML' });
     } catch (error) {
-        // Log error but don't crash the bot
         console.error('Failed to send admin notification:', error.message);
     }
 }
@@ -96,7 +87,6 @@ async function notifyAdminOfActivity(bot, from, action) {
 // 1. /start command
 bot.onText(/\/start(?: (.+))?/, async (msg, match) => {
     const chatId = msg.chat.id;
-    // Notify admin
     notifyAdminOfActivity(bot, msg.from, msg.text);
     
     const referrerCode = match ? match[1] : null;
@@ -110,7 +100,6 @@ bot.onText(/\/start(?: (.+))?/, async (msg, match) => {
 
 // 2. Callback Queries (Button Clicks)
 bot.on('callback_query', async (callbackQuery) => {
-    // Notify admin
     notifyAdminOfActivity(bot, callbackQuery.from, `Button: ${callbackQuery.data}`);
     
     try {
@@ -123,7 +112,7 @@ bot.on('callback_query', async (callbackQuery) => {
 // 3. Text Messages
 bot.on('message', async (msg) => {
     const chatId = msg.chat.id;
-    if (msg.text && msg.text.startsWith('/')) return; // Ignore commands
+    if (msg.text && msg.text.startsWith('/')) return; 
 
     try {
         const user = await User.findOne({ where: { telegramId: msg.from.id } });
@@ -131,7 +120,6 @@ bot.on('message', async (msg) => {
             return bot.sendMessage(chatId, "Please start the bot by sending /start");
         }
         
-        // Notify admin
         notifyAdminOfActivity(bot, msg.from, msg.text);
         
         i18n.setLocale(user.language);
@@ -162,9 +150,8 @@ app.listen(PORT, async () => {
     }
 });
 
-// --- NEW: Keep-Alive Pinger ---
-// Pings the app every 14 minutes to prevent Render free tier from spinning down
-const PING_INTERVAL_MS = 14 * 60 * 1000; // 14 minutes
+// --- Keep-Alive Pinger ---
+const PING_INTERVAL_MS = 14 * 60 * 1000;
 if (WEBHOOK_DOMAIN) {
     setInterval(async () => {
         try {
