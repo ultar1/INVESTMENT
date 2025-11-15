@@ -5,18 +5,17 @@ const {
     getInvestmentPlansKeyboard, 
     getCancelKeyboard,
     getBackKeyboard,
-    getWithdrawNetworkKeyboard, // Renamed
-    // getDepositNetworkKeyboard // Not needed here
+    getWithdrawNetworkKeyboard // We no longer need getDepositNetworkKeyboard
 } = require('../services/keyboards');
 const { PLANS, MIN_WITHDRAWAL, MIN_DEPOSIT, ADMIN_CHAT_ID } = require('../config');
-const { generateDepositInvoice } = require('../handlers/paymentHandler');
+// We no longer need generateDepositInvoice here
+// const { generateDepositInvoice } = require('../handlers/paymentHandler');
 
 // Helper to edit message
 async function editOrSend(bot, chatId, msgId, text, options) {
     try {
         await bot.editMessageText(text, { chat_id: chatId, message_id: msgId, ...options });
     } catch (error) {
-        // If message is not modified or deleted, send a new one
         await bot.sendMessage(chatId, text, options);
     }
 }
@@ -34,15 +33,15 @@ const handleCallback = async (bot, callbackQuery) => {
 
     // --- Admin Approval Logic ---
     if (data.startsWith('admin_approve_') || data.startsWith('admin_reject_')) {
-        // (This whole block is unchanged from the previous version)
+        // (This block is unchanged)
         if (!ADMIN_CHAT_ID || from.id.toString() !== ADMIN_CHAT_ID) {
             return bot.answerCallbackQuery(callbackQuery.id, "You are not authorized for this action.", true);
         }
         const action = data.split('_')[1];
         const txId = data.split('_')[2];
         const tx = await Transaction.findOne({ where: { id: txId }, include: User });
-        if (!tx) { /* ... */ }
-        if (tx.status !== 'pending') { /* ... */ }
+        if (!tx) { return; }
+        if (tx.status !== 'pending') { return; }
         const txUser = tx.User;
         i18n.setLocale(txUser.language);
         const __ = i18n.__;
@@ -79,7 +78,6 @@ const handleCallback = async (bot, callbackQuery) => {
     
     // --- End of Admin Logic ---
 
-    // Set locale for the *user clicking*
     i18n.setLocale(user.language);
     const __ = i18n.__;
 
@@ -156,38 +154,9 @@ const handleCallback = async (bot, callbackQuery) => {
             });
         }
         
-        // --- NEW: Deposit (Step 2) - Select Network ---
-        else if (data.startsWith('deposit_network_')) {
-            if (user.state !== 'awaiting_deposit_network') {
-                 return bot.answerCallbackQuery(callbackQuery.id, "This request has expired.", true);
-            }
-            
-            const network = data.split('_')[2]; // 'trc20' or 'bep20'
-            const amount = user.stateContext.amount; // Get amount from context
-
-            const invoice = await generateDepositInvoice(user, amount, network);
-            
-            if (invoice) {
-                await Transaction.create({
-                    user: user.id,
-                    type: 'deposit',
-                    amount: invoice.price_amount, // The amount in USD
-                    status: 'pending',
-                    txId: invoice.payment_id
-                });
-                
-                user.state = 'none';
-                user.stateContext = {};
-                await user.save();
-
-                const text = __("deposit.invoice_created", invoice.pay_amount, network.toUpperCase(), invoice.pay_address);
-                await editOrSend(bot, chatId, msgId, text, { parse_mode: 'Markdown' });
-            } else {
-                await editOrSend(bot, chatId, msgId, __("deposit.api_error"), {
-                    reply_markup: getBackKeyboard(user, "back_to_main")
-                });
-            }
-        }
+        // --- REMOVED: Deposit (Step 2) 'deposit_network_' ---
+        // This logic is no longer needed as it's handled
+        // in textHandler.js after the amount is entered.
         
         // --- Withdraw (Step 1) ---
         else if (data === 'withdraw') {
@@ -256,7 +225,6 @@ const handleCallback = async (bot, callbackQuery) => {
         bot.answerCallbackQuery(callbackQuery.id, __("error_generic"), true);
     }
     
-    // Acknowledge all non-admin clicks here
     bot.answerCallbackQuery(callbackQuery.id);
 };
 
