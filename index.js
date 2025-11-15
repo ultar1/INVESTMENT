@@ -52,32 +52,21 @@ app.get('/health', (req, res) => {
     res.status(200).send('OK');
 });
 
-// --- FIX: Admin Notification Cache ---
-// This will store { messageId, timestamp } for each user
+// --- Admin Notification Cache ---
 const adminNotificationCache = new Map();
 const TEN_MINUTES_MS = 10 * 60 * 1000;
 
-/**
- * Sends a non-blocking, anti-spam notification to the admin.
- * It will EDIT the last message if it's from the same user within 10 mins.
- */
 async function notifyAdminOfActivity(from, action) {
     if (!ADMIN_CHAT_ID) return; 
-
-    // Use a separate bot instance for sending, as the main one is on webhook
     const notifyBot = new TelegramBot(BOT_TOKEN);
-
     const sanitize = (text) => {
         if (!text) return 'N/A';
         return text.toString().replace(/</g, '&lt;').replace(/>/g, '&gt;');
     }
-
     const time = new Date().toLocaleTimeString('en-GB', { timeZone: 'UTC' });
     const name = sanitize(from.first_name);
     const username = from.username ? `@${from.username}` : 'N/A';
-    // --- FIX: Use the actual action from the user ---
     const actionText = sanitize(action) || 'Interaction';
-
     const message = [
         `<b>User Online:</b>`,
         `<b>ID:</b> <code>${from.id}</code>`,
@@ -86,33 +75,25 @@ async function notifyAdminOfActivity(from, action) {
         `<b>Last Action:</b> ${actionText}`,
         `<b>Time:</b> ${time} (UTC)`
     ].join('\n');
-
     const currentTime = Date.now();
     const cached = adminNotificationCache.get(from.id);
-
     try {
         if (cached && (currentTime - cached.timestamp < TEN_MINUTES_MS)) {
-            // --- 1. Try to EDIT the message ---
             await notifyBot.editMessageText(message, { 
                 chat_id: ADMIN_CHAT_ID, 
                 message_id: cached.messageId, 
                 parse_mode: 'HTML' 
             });
-            // Update timestamp
             adminNotificationCache.set(from.id, { ...cached, timestamp: currentTime });
         } else {
-            // --- 2. Send a NEW message ---
             const sentMessage = await notifyBot.sendMessage(ADMIN_CHAT_ID, message, { parse_mode: 'HTML' });
-            // Store new messageId and timestamp
             adminNotificationCache.set(from.id, { 
                 messageId: sentMessage.message_id, 
                 timestamp: currentTime 
             });
         }
     } catch (error) {
-        // Handle error (e.g., message was deleted, so we can't edit it)
         if (error.response && error.response.body.description.includes("message to edit not found")) {
-            // The message was deleted. Send a new one.
             try {
                 const sentMessage = await notifyBot.sendMessage(ADMIN_CHAT_ID, message, { parse_mode: 'HTML' });
                 adminNotificationCache.set(from.id, { 
@@ -121,7 +102,6 @@ async function notifyAdminOfActivity(from, action) {
                 });
             } catch (e) {}
         } else {
-            // Other error
             console.error('Failed to send admin notification:', error.message);
         }
     }
@@ -132,9 +112,7 @@ async function notifyAdminOfActivity(from, action) {
 // 1. /start command
 bot.onText(/\/start(?: (.+))?/, async (msg, match) => {
     const chatId = msg.chat.id;
-    // --- FIX: Pass the action ---
     notifyAdminOfActivity(msg.from, msg.text);
-    
     const referrerCode = match ? match[1] : null;
     try {
         await registerUser(bot, msg, referrerCode);
@@ -146,9 +124,7 @@ bot.onText(/\/start(?: (.+))?/, async (msg, match) => {
 
 // 2. Callback Queries (Button Clicks)
 bot.on('callback_query', async (callbackQuery) => {
-    // --- FIX: Pass the action ---
     notifyAdminOfActivity(callbackQuery.from, `Button: ${callbackQuery.data}`);
-    
     try {
         await handleCallback(bot, callbackQuery);
     } catch (error) {
@@ -159,19 +135,14 @@ bot.on('callback_query', async (callbackQuery) => {
 // 3. Text Messages
 bot.on('message', async (msg) => {
     const chatId = msg.chat.id;
-    if (msg.text && msg.text.startsWith('/')) return; 
-
+    if (msg.text && msg.text.startsWith('/')) return; // Handled by onText
     try {
         const user = await User.findOne({ where: { telegramId: msg.from.id } });
         if (!user) {
             return bot.sendMessage(chatId, "Please start the bot by sending /start");
         }
-        
-        // --- FIX: Pass the action ---
         notifyAdminOfActivity(msg.from, msg.text);
-        
         i18n.setLocale(user.language);
-
         if (user.state !== 'none' && msg.text) {
             await handleTextInput(bot, msg, user);
         } else if (msg.text) {
@@ -183,6 +154,84 @@ bot.on('message', async (msg) => {
     }
 });
 
+// --- NEW: ADMIN COMMAND /add ---
+bot.onText(/\/add (\d+\.?\d*) (\d+)/, async (msg, match) => {
+    const chatId = msg.chat.id;
+    const adminId = msg.from.id;
+
+    // 1. Security Check
+    if (adminId.toString() !== ADMIN_CHAT_ID) {
+        console.warn(`Unauthorized /add command attempt by user ${adminId}`);
+        return;
+    }
+
+    try {
+        const amount = parseFloat(match[1]);
+        const telegramId = match[2];
+
+        const user = await User.findOne({ where: { telegramId: telegramId } });
+        if (!user) {
+            return bot.sendMessage(chatId, `Admin: User with ID ${telegramId} not found.`);
+        }
+
+        user.balance += amount;
+        await user.save();
+
+        // Notify Admin
+        await bot.sendMessage(chatId, `Success: Added ${amount} USDT to ${user.firstName} (ID: ${user.telegramId}).\nNew Balance: ${user.balance.toFixed(2)} USDT.`);
+
+        // Notify User
+        i18n.setLocale(user.language);
+        await bot.sendMessage(user.telegramId, i18n.__('admin.add_balance_user', amount.toFixed(2), user.balance.toFixed(2)));
+
+    } catch (error) {
+        console.error("Admin /add error:", error);
+        await bot.sendMessage(chatId, "Admin: An error occurred.");
+    }
+});
+
+// --- NEW: ADMIN COMMAND /remove ---
+bot.onText(/\/remove (\d+\.?\d*) (\d+)/, async (msg, match) => {
+    const chatId = msg.chat.id;
+    const adminId = msg.from.id;
+
+    // 1. Security Check
+    if (adminId.toString() !== ADMIN_CHAT_ID) {
+        console.warn(`Unauthorized /remove command attempt by user ${adminId}`);
+        return;
+    }
+
+    try {
+        const amount = parseFloat(match[1]);
+        const telegramId = match[2];
+
+        const user = await User.findOne({ where: { telegramId: telegramId } });
+        if (!user) {
+            return bot.sendMessage(chatId, `Admin: User with ID ${telegramId} not found.`);
+        }
+
+        if (user.balance < amount) {
+            return bot.sendMessage(chatId, `Admin: Cannot remove. User ${user.firstName} only has ${user.balance.toFixed(2)} USDT.`);
+        }
+
+        user.balance -= amount;
+        await user.save();
+
+        // Notify Admin
+        await bot.sendMessage(chatId, `Success: Removed ${amount} USDT from ${user.firstName} (ID: ${user.telegramId}).\nNew Balance: ${user.balance.toFixed(2)} USDT.`);
+
+        // Notify User
+        i18n.setLocale(user.language);
+        await bot.sendMessage(user.telegramId, i18n.__('admin.remove_balance_user', amount.toFixed(2), user.balance.toFixed(2)));
+
+    } catch (error) {
+        console.error("Admin /remove error:", error);
+        await bot.sendMessage(chatId, "Admin: An error occurred.");
+    }
+});
+// --- END OF NEW COMMANDS ---
+
+
 // --- Start Server and Database ---
 app.listen(PORT, async () => {
     console.log(`Server is running on port ${PORT}`);
@@ -190,8 +239,6 @@ app.listen(PORT, async () => {
         await sequelize.authenticate();
         console.log('PostgreSQL connected successfully.');
         
-        // Use 'alter: true' to be safe. 
-        // If "Users" table still not found, change to 'force: true' for ONE deploy.
         await sequelize.sync({ alter: true }); 
         console.log('All models were synchronized successfully (alter).');
         
