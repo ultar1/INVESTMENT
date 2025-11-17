@@ -2,8 +2,8 @@
 =================================================================
 == DANGER: SECURITY WARNING ==
 =================================================================
-This file contains hardcoded secrets (BOT_TOKEN, ADMIN_CHAT_ID).
-DO NOT share this file or push it to a public GitHub repository.
+This file should not contain any secrets.
+Load all secrets from .env
 =================================================================
 */
 
@@ -43,16 +43,20 @@ const MIN_DEPOSIT = 10;
 module.exports = {
     PORT: process.env.PORT || 3000,
     
-    // --- Bot Secrets (Hardcoded) ---
-    BOT_TOKEN: cleanEnvVar("8302539985:AAFPZloZ4mzVQtjw2DduHHyevw0mkpYBnkI"),
-    ADMIN_CHAT_ID: 7302005705,
+    // --- Bot Secrets (Loaded from .env file) ---
+    // --- DO NOT PASTE YOUR TOKEN HERE ---
+    BOT_TOKEN: cleanEnvVar(process.env.BOT_TOKEN),
+    ADMIN_CHAT_ID: cleanEnvVar(process.env.ADMIN_CHAT_ID),
 
     // --- Database (From Environment) ---
     DATABASE_URL: cleanEnvVar(process.env.DATABASE_URL),
 
-    // --- NowPayments (From Environment) ---
-    NOWPAYMENTS_API_KEY: cleanEnvVar(process.env.NOWPAYMENTS_API_KEY),
-    NOWPAYMENTS_IPN_SECRET: cleanEnvVar(process.env.NOWPAYMENTS_IPN_SECRET),
+    // --- FIX: Your Manual Deposit Wallet ---
+    ADMIN_DEPOSIT_WALLET: "0x36decaeaf371555837968b9196f323b5708c4b32",
+
+    // --- NowPayments (REMOVED, NO LONGER NEEDED) ---
+    // NOWPAYMENTS_API_KEY: cleanEnvVar(process.env.NOWPAYMENTS_API_KEY),
+    // NOWPAYMENTS_IPN_SECRET: cleanEnvVar(process.env.NOWPAYMENTS_IPN_SECRET),
 
     // --- Bot Info (From Environment) ---
     ADMIN_USERNAME: cleanEnvVar(process.env.ADMIN_USERNAME) || "FINTRUST_admin",
