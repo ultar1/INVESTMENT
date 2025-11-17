@@ -48,7 +48,16 @@
 "invoice_created": "<b>Factura BEP20 Creada</b>\n\nCantidad: <b>$%.2f USD</b>\n\nPor favor, haz clic en el botón de abajo para pagar con USDT (BEP20).\n\n<i>Tu saldo se acreditará automáticamente una vez que la red confirme la transacción.</i>",
 "pay_button": "Haga clic para pagar (Solo BEP20)",
 "api_error": "No se pudo crear una factura de depósito. Por favor, inténtalo más tarde.",
-"ipn_success": "¡Tu depósito de %.2f USDT ha sido confirmado y añadido a tu saldo principal!"
+"ipn_success": "¡Tu depósito de %.2f USDT ha sido confirmado y añadido a tu saldo principal!",
+
+"manual_instructions": "<b>Recarga de Saldo</b>\n\nTu billetera: %s\n\n📋 <b>Instrucciones:</b>\n1️⃣ Envía USDT BEP20 a la dirección especificada\n2️⃣ Monto mínimo: 10 USDT\n3️⃣ ¡Usa solo la red BSC (BEP20)!\n4️⃣ Presiona 'Pagué' después de enviar\n\n⚠️ <b>Importante:</b> ¡Usa solo la red BSC (BEP20), de lo contrario los fondos se perderán!",
+"i_have_paid_button": "Pagué",
+"admin_notified": "✅ <b>¡Gracias!</b>\n\nHemos notificado al administrador para su verificación. Tu saldo será acreditado tan pronto como se confirme la transacción.",
+"notify_admin": "Nueva solicitud de verificación de depósito:\n\nUsuario: %s (%s)\nCantidad: %s USDT\n\nID de Transacción: %s",
+"admin_approve": "Aprobar Depósito",
+"admin_reject": "Rechazar Depósito",
+"notify_user_approved": "✅ Tu solicitud de depósito de %s USDT ha sido aprobada y el monto añadido a tu saldo principal.",
+"notify_user_rejected": "❌ Tu solicitud de depósito fue rechazada. Si crees que esto es un error, por favor contacta a soporte."
 },
 "withdraw": {
 "min_error": "El retiro mínimo es %.2f USDT.",
