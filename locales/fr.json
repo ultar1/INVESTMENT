@@ -48,7 +48,16 @@
 "invoice_created": "<b>Facture BEP20 Créée</b>\n\nMontant: <b>$%.2f USD</b>\n\nVeuillez cliquer sur le bouton ci-dessous pour payer avec USDT (BEP20).\n\n<i>Votre solde sera crédité automatiquement une fois le réseau confirmé la transaction.</i>",
 "pay_button": "Cliquez pour payer (BEP20 Uniquement)",
 "api_error": "Impossible de créer une facture de dépôt. Veuillez réessayer plus tard.",
-"ipn_success": "Votre dépôt de %.2f USDT a été confirmé et ajouté à votre solde principal !"
+"ipn_success": "Votre dépôt de %.2f USDT a été confirmé et ajouté à votre solde principal !",
+
+"manual_instructions": "<b>Dépôt de Solde</b>\n\nVotre portefeuille : %s\n\n📋 <b>Instructions :</b>\n1️⃣ Envoyez des USDT (BEP20) à l'adresse ci-dessus\n2️⃣ Montant minimum : 10 USDT\n3️⃣ Utilisez uniquement le réseau BSC (BEP20) !\n4️⃣ Appuyez sur 'J'ai Payé' après l'envoi\n\n⚠️ <b>Important :</b> Utilisez uniquement le réseau BEP20, sinon les fonds seront perdus !",
+"i_have_paid_button": "J'ai Payé",
+"admin_notified": "✅ <b>Merci !</b>\n\nNous avons prévenu l'administrateur pour vérification. Votre solde sera crédité dès que la transaction sera confirmée.",
+"notify_admin": "Nouvelle demande de vérification de dépôt :\n\nUtilisateur : %s (%s)\nMontant : %s USDT\n\nID de Transaction : %s",
+"admin_approve": "Approuver le Dépôt",
+"admin_reject": "Rejeter le Dépôt",
+"notify_user_approved": "✅ Votre demande de dépôt de %s USDT a été approuvée et le montant a été ajouté à votre solde principal.",
+"notify_user_rejected": "❌ Votre demande de dépôt a été rejetée. Si vous pensez qu'il s'agit d'une erreur, veuillez contacter le support."
 },
 "withdraw": {
 "min_error": "Le retrait minimum est de %.2f USDT.",
