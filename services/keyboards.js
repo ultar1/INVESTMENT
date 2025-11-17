@@ -95,6 +95,20 @@ const getAdminReviewKeyboard = (transactionId, i18nInstance) => {
     };
 };
 
+// --- FIX: Added the new keyboard for approving MANUAL DEPOSITS ---
+const getAdminDepositReviewKeyboard = (transactionId, i18nInstance) => {
+    const __ = i18nInstance;
+    return {
+        inline_keyboard: [
+            [
+                { text: __("deposit.admin_approve"), callback_data: `admin_approve_deposit_${transactionId}` },
+                { text: __("deposit.admin_reject"), callback_data: `admin_reject_deposit_${transactionId}` }
+            ]
+        ]
+    };
+};
+// --- END OF FIX ---
+
 module.exports = {
     getLanguageKeyboard,
     getMainMenuKeyboard,
@@ -104,5 +118,6 @@ module.exports = {
     getCancelKeyboard,
     getBackKeyboard,
     getMakeInvestmentButton,
-    getAdminReviewKeyboard
+    getAdminReviewKeyboard,
+    getAdminDepositReviewKeyboard // --- FIX: Exported the new function ---
 };
