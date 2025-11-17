@@ -5,7 +5,9 @@ const {
     getInvestmentPlansKeyboard, 
     getCancelKeyboard,
     getBackKeyboard,
-    getWithdrawNetworkKeyboard
+    getWithdrawNetworkKeyboard,
+    getAdminReviewKeyboard, // For Withdrawals
+    getAdminDepositReviewKeyboard // --- FIX: Import new keyboard ---
 } = require('../services/keyboards');
 const { PLANS, MIN_WITHDRAWAL, MIN_DEPOSIT, ADMIN_CHAT_ID, WELCOME_BONUS } = require('../config');
 
@@ -17,14 +19,13 @@ async function editOrSend(bot, chatId, msgId, text, options) {
     try {
         await bot.editMessageText(text, { chat_id: chatId, message_id: msgId, ...options });
     } catch (error) {
+        // If edit fails (e.g., message not found), send a new message
         await bot.sendMessage(chatId, text, options);
     }
 }
 
-// --- THIS IS THE FIX ---
 // Accept `user` and `__` (language function) as arguments
 const handleCallback = async (bot, callbackQuery, user, __) => {
-// --- END OF FIX ---
     const msg = callbackQuery.message;
     const chatId = msg.chat.id;
     const msgId = msg.message_id;
@@ -33,7 +34,7 @@ const handleCallback = async (bot, callbackQuery, user, __) => {
     
     if (!user) return bot.answerCallbackQuery(callbackQuery.id);
 
-    // --- Admin Approval Logic ---
+    // --- Admin Approval Logic (WITHDRAWAL) ---
     if (data.startsWith('admin_approve_') || data.startsWith('admin_reject_')) {
         
         if (!ADMIN_CHAT_ID || from.id.toString() !== ADMIN_CHAT_ID.toString()) {
@@ -54,9 +55,8 @@ const handleCallback = async (bot, callbackQuery, user, __) => {
         }
         
         const txUser = tx.User;
-        // Set locale to the *user's* language before sending notification
         i18n.setLocale(txUser.language);
-        const admin__ = i18n.__; // Create a new `__` for the *transaction user*
+        const admin__ = i18n.__;
         
         const t = await sequelize.transaction();
         try {
@@ -73,7 +73,7 @@ const handleCallback = async (bot, callbackQuery, user, __) => {
             } else if (action === 'reject') {
                 tx.status = 'failed';
                 await tx.save({ transaction: t });
-                txUser.mainBalance = (txUser.mainBalance || 0) + tx.amount;
+                txUser.mainBalance = (txUser.mainBalance || 0) + tx.amount; // Give money back
                 await txUser.save({ transaction: t });
                 await t.commit();
                 await bot.editMessageText(msg.text + `\n\nRejected by ${from.first_name}`, {
@@ -88,10 +88,63 @@ const handleCallback = async (bot, callbackQuery, user, __) => {
         }
         return bot.answerCallbackQuery(callbackQuery.id, "Action processed.");
     }
+
+    // --- FIX: Admin Approval Logic (DEPOSIT) ---
+    if (data.startsWith('admin_approve_deposit_') || data.startsWith('admin_reject_deposit_')) {
+        
+        if (!ADMIN_CHAT_ID || from.id.toString() !== ADMIN_CHAT_ID.toString()) {
+            return bot.answerCallbackQuery(callbackQuery.id, "You are not authorized for this action.", true);
+        }
+
+        const action = data.split('_')[1];
+        const txId = data.split('_')[3]; // e.g., admin_approve_deposit_123
+        const tx = await Transaction.findOne({ where: { id: txId }, include: User });
+        
+        if (!tx) { 
+            await bot.editMessageText(msg.text + "\n\nError: Transaction not found.", { chat_id: chatId, message_id: msgId });
+            return bot.answerCallbackQuery(callbackQuery.id);
+        }
+        if (tx.status !== 'pending') { 
+            await bot.editMessageText(msg.text + "\n\nError: This transaction has already been processed.", { chat_id: chatId, message_id: msgId });
+            return bot.answerCallbackQuery(callbackQuery.id);
+        }
+        
+        const txUser = tx.User;
+        i18n.setLocale(txUser.language);
+        const admin__ = i18n.__;
+        
+        const t = await sequelize.transaction();
+        try {
+            if (action === 'approve') {
+                tx.status = 'completed';
+                await tx.save({ transaction: t });
+                txUser.mainBalance = (txUser.mainBalance || 0) + tx.amount; // Add money
+                await txUser.save({ transaction: t });
+                await t.commit();
+                await bot.editMessageText(msg.text + `\n\nApproved by ${from.first_name}`, {
+                    chat_id: chatId, message_id: msgId, reply_markup: null
+                });
+                await bot.sendMessage(txUser.telegramId, admin__("deposit.notify_user_approved", toFixedSafe(tx.amount)));
+            } else if (action === 'reject') {
+                tx.status = 'failed';
+                await tx.save({ transaction: t });
+                // No money to give back, just mark as failed
+                await t.commit();
+                await bot.editMessageText(msg.text + `\n\nRejected by ${from.first_name}`, {
+                    chat_id: chatId, message_id: msgId, reply_markup: null
+                });
+                await bot.sendMessage(txUser.telegramId, admin__("deposit.notify_user_rejected"));
+            }
+        } catch (e) {
+            await t.rollback();
+            console.error("Admin DEPOSIT review processing error:", e);
+            bot.answerCallbackQuery(callbackQuery.id, "Database error.", true);
+        }
+        return bot.answerCallbackQuery(callbackQuery.id, "Action processed.");
+    }
+    // --- END OF FIX ---
     
     // --- End of Admin Logic ---
-
-    // const __ = i18n.__; // <-- REMOVED! We use the one passed from index.js
 
     try {
         // --- Language Selection ---
@@ -99,13 +152,13 @@ const handleCallback = async (bot, callbackQuery, user, __) => {
             user.language = data.split('_')[2];
             await user.save();
             
-            // Re-set locale with the NEW language
             i18n.setLocale(user.language);
-            const new__ = i18n.__; // Create a new `__` for the response
+            const new__ = i18n.__;
             
             await bot.deleteMessage(chatId, msgId);
+            
             await bot.sendMessage(chatId, new__("language_set", new__("language_name"), from.first_name), {
-                reply_markup: getMainMenuKeyboard(user, new__) // Pass `new__`
+                reply_markup: getMainMenuKeyboard(user, new__)
             });
 
             if (user.stateContext && user.stateContext.isNewUser) {
@@ -119,11 +172,13 @@ const handleCallback = async (bot, callbackQuery, user, __) => {
         else if (data === 'back_to_main') {
             user.state = 'none';
             await user.save();
-            const text = __("main_menu_title", from.first_name);
-            await editOrSend(bot, chatId, msgId, text, { reply_markup: undefined });
-            await bot.sendMessage(chatId, __("main_menu_title", from.first_name), {
-                reply_markup: getMainMenuKeyboard(user, __) // Pass `__`
+            
+            // --- FIX: Use "Welcome back" message ---
+            const text = __("language_set", __("language_name"), from.first_name);
+            await editOrSend(bot, chatId, msgId, text, { 
+                reply_markup: getMainMenuKeyboard(user, __)
             });
+            // --- END OF FIX ---
         }
         
         // --- Show Investment Plans ---
@@ -131,7 +186,7 @@ const handleCallback = async (bot, callbackQuery, user, __) => {
              const balanceText = toFixedSafe(user.mainBalance);
              const text = __("plans.title") + "\n\n" + __("common.balance", balanceText);
              await editOrSend(bot, chatId, msgId, text, {
-                reply_markup: getInvestmentPlansKeyboard(user, __) // Pass `__`
+                reply_markup: getInvestmentPlansKeyboard(user, __)
             });
         }
 
@@ -153,7 +208,7 @@ const handleCallback = async (bot, callbackQuery, user, __) => {
                 __("common.balance", balanceText)
             );
             await editOrSend(bot, chatId, msgId, text, {
-                reply_markup: getCancelKeyboard(user, __) // Pass `__`
+                reply_markup: getCancelKeyboard(user, __)
             });
         }
 
@@ -162,10 +217,15 @@ const handleCallback = async (bot, callbackQuery, user, __) => {
             user.state = 'none';
             user.stateContext = {};
             await user.save();
+            
+            // --- FIX: Use "Welcome back" message ---
             await editOrSend(bot, chatId, msgId, __("action_canceled"), { reply_markup: undefined });
-            await bot.sendMessage(chatId, __("main_menu_title", from.first_name), {
-                reply_markup: getMainMenuKeyboard(user, __) // Pass `__`
+            
+            const welcomeText = __("language_set", __("language_name"), from.first_name);
+            await bot.sendMessage(chatId, welcomeText, {
+                reply_markup: getMainMenuKeyboard(user, __)
             });
+            // --- END OF FIX ---
         }
 
         // --- Deposit (Step 1) ---
@@ -173,10 +233,62 @@ const handleCallback = async (bot, callbackQuery, user, __) => {
             user.state = 'awaiting_deposit_amount';
             await user.save();
             await editOrSend(bot, chatId, msgId, __("deposit.ask_amount", MIN_DEPOSIT), { 
-                reply_markup: getCancelKeyboard(user, __) // Pass `__`
+                reply_markup: getCancelKeyboard(user, __)
             });
         }
         
+        // --- FIX: User clicks "I Have Paid" ---
+        else if (data.startsWith('deposit_paid_')) {
+            const txId = data.split('_')[2];
+            const tx = await Transaction.findOne({ where: { id: txId }, include: User });
+
+            if (!tx || tx.User.id !== user.id) {
+                return bot.answerCallbackQuery(callbackQuery.id, "Transaction not found.", true);
+            }
+            if (tx.status !== 'pending') {
+                return bot.answerCallbackQuery(callbackQuery.id, "This deposit is already being processed.", true);
+            }
+            // User might be in 'awaiting_payment_confirmation' state
+            // if (user.state !== 'awaiting_payment_confirmation') {
+            //      return bot.answerCallbackQuery(callbackQuery.id, "Invalid action.", true);
+            // }
+
+            // 1. Reset user state
+            user.state = 'none';
+            user.stateContext = {}; // Clear context
+            await user.save();
+            
+            // 2. Tell user to wait
+            await editOrSend(bot, chatId, msgId, __("deposit.admin_notified"), { reply_markup: undefined });
+            const welcomeText = __("language_set", __("language_name"), from.first_name);
+            await bot.sendMessage(chatId, welcomeText, {
+                reply_markup: getMainMenuKeyboard(user, __)
+            });
+
+            // 3. Notify Admin
+            if (ADMIN_CHAT_ID) {
+                try {
+                    i18n.setLocale('en'); // Use admin's language
+                    const admin__ = i18n.__;
+                    const notifyText = admin__("deposit.notify_admin", 
+                        tx.User.firstName || 'N/A', 
+                        tx.User.telegramId, 
+                        toFixedSafe(tx.amount),
+                        tx.id
+                    );
+                    const adminKeyboard = getAdminDepositReviewKeyboard(tx.id, admin__);
+                    await bot.sendMessage(ADMIN_CHAT_ID, notifyText, {
+                        reply_markup: adminKeyboard
+                    });
+                } catch (adminError) {
+                    console.error("Failed to notify admin of deposit:", adminError.message);
+                }
+            } else {
+                console.warn("ADMIN_CHAT_ID is not set. Cannot notify admin for deposit.");
+            }
+        }
+        // --- END OF FIX ---
+
         // --- Withdraw (Step 1) ---
         else if (data === 'withdraw') {
             
@@ -205,7 +317,7 @@ const handleCallback = async (bot, callbackQuery, user, __) => {
                 user.state = 'awaiting_wallet_address';
                 await user.save();
                 await editOrSend(bot, chatId, msgId, __("withdraw.ask_wallet"), {
-                    reply_markup: getCancelKeyboard(user, __) // Pass `__`
+                    reply_markup: getCancelKeyboard(user, __)
                 });
             } else {
                 user.state = 'awaiting_withdrawal_amount';
@@ -219,7 +331,7 @@ const handleCallback = async (bot, callbackQuery, user, __) => {
                     minWithdrawalText
                 );
                 await editOrSend(bot, chatId, msgId, text, {
-                    reply_markup: getCancelKeyboard(user, __) // Pass `__`
+                    reply_markup: getCancelKeyboard(user, __)
                 });
             }
         }
@@ -241,7 +353,7 @@ const handleCallback = async (bot, callbackQuery, user, __) => {
             const minWithdrawalText = toFixedSafe(MIN_WITHDRAWAL);
             const text = __("withdraw.wallet_set_success", user.walletAddress, network.toUpperCase(), minWithdrawalText);
             await editOrSend(bot, chatId, msgId, text, {
-                reply_markup: getCancelKeyboard(user, __) // Pass `__`
+                reply_markup: getCancelKeyboard(user, __)
             });
         }
         
@@ -254,7 +366,7 @@ const handleCallback = async (bot, callbackQuery, user, __) => {
             });
             if (txs.length === 0) {
                 return editOrSend(bot, chatId, msgId, __("transactions.no_transactions"), {
-                    reply_markup: getBackKeyboard(user, "back_to_main", __) // Pass `__`
+                    reply_markup: getBackKeyboard(user, "back_to_main", __)
                 });
             }
             let text = __("transactions.title") + "\n\n";
@@ -263,7 +375,7 @@ const handleCallback = async (bot, callbackQuery, user, __) => {
                 text += __("transactions.entry", date, tx.type, toFixedSafe(tx.amount), tx.status) + "\n";
             });
             await editOrSend(bot, chatId, msgId, text, {
-                reply_markup: getBackKeyboard(user, "back_to_main", __) // Pass `__`
+                reply_markup: getBackKeyboard(user, "back_to_main", __)
             });
         }
 
