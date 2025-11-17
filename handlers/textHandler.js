@@ -6,9 +6,15 @@ const {
     getWithdrawNetworkKeyboard, 
     getAdminReviewKeyboard 
 } = require('../services/keyboards');
-const { PLANS, MIN_WITHDRAWAL, MIN_DEPOSIT, ADMIN_CHAT_ID, WELCOME_BONUS } = require('../config');
+const { 
+    PLANS, 
+    MIN_WITHDRAWAL, 
+    MIN_DEPOSIT, 
+    ADMIN_CHAT_ID,
+    ADMIN_DEPOSIT_WALLET // --- FIX: Import your new wallet ---
+} = require('../config');
 const { handleReferralBonus } = require('./investmentHandler');
-const { generateDepositInvoice } = require('./paymentHandler');
+// const { generateDepositInvoice } = require('./paymentHandler'); // --- FIX: Removed NowPayments ---
 
 // Safety function to prevent .toFixed crash
 const toFixedSafe = (num, digits = 2) => (typeof num === 'number' ? num : 0).toFixed(digits);
@@ -28,14 +34,22 @@ const handleTextInput = async (bot, msg, user, __) => {
         if (user.state === 'awaiting_investment_amount') {
             const amount = parseFloat(text);
             const plan = PLANS[user.stateContext.planId];
-            if (isNaN(amount) || amount <= 0) return bot.sendMessage(chatId, __("plans.err_invalid_amount"), { reply_markup: getCancelKeyboard(user) });
-            if (amount < plan.min) return bot.sendMessage(chatId, __("plans.err_min_amount", plan.min), { reply_markup: getCancelKeyboard(user) });
-            if (amount > plan.max) return bot.sendMessage(chatId, __("plans.err_max_amount", plan.max), { reply_markup: getCancelKeyboard(user) });
             
+            // --- FIX: Pass `__` to ALL error keyboards ---
+            if (isNaN(amount) || amount <= 0) {
+                return bot.sendMessage(chatId, __("plans.err_invalid_amount"), { reply_markup: getCancelKeyboard(user, __) });
+            }
+            if (amount < plan.min) {
+                return bot.sendMessage(chatId, __("plans.err_min_amount", plan.min), { reply_markup: getCancelKeyboard(user, __) });
+            }
+            if (amount > plan.max) {
+                return bot.sendMessage(chatId, __("plans.err_max_amount", plan.max), { reply_markup: getCancelKeyboard(user, __) });
+            }
             const mainBalance = user.mainBalance || 0;
             if (amount > mainBalance) {
-                return bot.sendMessage(chatId, __("plans.err_insufficient_funds", toFixedSafe(mainBalance)), { reply_markup: getCancelKeyboard(user) });
+                return bot.sendMessage(chatId, __("plans.err_insufficient_funds", toFixedSafe(mainBalance)), { reply_markup: getCancelKeyboard(user, __) });
             }
+            // --- END OF FIX ---
 
             const t = await sequelize.transaction();
             try {
@@ -54,10 +68,7 @@ const handleTextInput = async (bot, msg, user, __) => {
                 await user.save({ transaction: t });
                 await t.commit();
                 
-                // --- FIX: Pass the `__` function to the handler ---
-                // (It's okay if this handler doesn't use it, but good practice)
                 handleReferralBonus(user.referrerId, amount, user.id, __); 
-                // --- END OF FIX ---
                 
                 const planName = __(`plans.plan_${plan.id.split('_')[1]}_button`);
                 await bot.sendMessage(chatId, __("plans.invest_success", toFixedSafe(amount), planName, plan.hours));
@@ -67,59 +78,59 @@ const handleTextInput = async (bot, msg, user, __) => {
             }
         }
         
-        // --- 2. Awaiting Deposit Amount ---
+        // --- 2. Awaiting Deposit Amount (MANUAL FLOW) ---
         else if (user.state === 'awaiting_deposit_amount') {
             const amount = parseFloat(text);
             if (isNaN(amount) || amount < MIN_DEPOSIT) {
-                return bot.sendMessage(chatId, __("deposit.min_error", MIN_DEPOSIT), { reply_markup: getCancelKeyboard(user) });
+                return bot.sendMessage(chatId, __("deposit.min_error", MIN_DEPOSIT), { reply_markup: getCancelKeyboard(user, __) });
             }
             
-            const invoice = await generateDepositInvoice(user, amount);
-            
-            if (invoice && invoice.invoice_url) {
-                
-                // --- FIX: Use `amount` (from user) not `invoice.price_amount` (from API) ---
-                // This ensures the amount is what the user typed.
-                await Transaction.create({
+            // --- FIX: Create a PENDING transaction for the admin to approve ---
+            let newTx;
+            try {
+                newTx = await Transaction.create({
                     user: user.id,
                     type: 'deposit',
-                    amount: amount, // Use the user's typed amount
-                    status: 'pending',
-                    txId: invoice.order_id
+                    amount: amount, 
+                    status: 'pending' // Admin must approve this
                 });
-                
-                user.state = 'none';
-                await user.save();
-
-                // --- FIX: Use `amount` (from user) not `invoice.price_amount` (from API) ---
-                const text = __("deposit.invoice_created", toFixedSafe(amount));
-                // --- END OF FIX ---
-
-                await bot.sendMessage(chatId, text, { 
-                    parse_mode: 'HTML',
-                    reply_markup: {
-                        inline_keyboard: [
-                            [{ text: __("deposit.pay_button"), url: invoice.invoice_url }],
-                            [{ text: __("common.cancel"), callback_data: "cancel_action" }]
-                        ]
-                    }
-                });
-                return;
-            } else {
-                await bot.sendMessage(chatId, __("deposit.api_error"));
+            } catch (e) {
+                console.error("Failed to create pending deposit tx:", e);
+                return bot.sendMessage(chatId, __("deposit.api_error"), { reply_markup: getCancelKeyboard(user, __) });
             }
+
+            user.state = 'awaiting_payment_confirmation'; // Set a new state
+            user.stateContext = { depositTxId: newTx.id }; // Save the TX ID
+            await user.save();
+
+            // Send the instructions and "I have paid" button
+            const instructions = __("deposit.manual_instructions", ADMIN_DEPOSIT_WALLET);
+            await bot.sendMessage(chatId, instructions, { 
+                parse_mode: 'HTML',
+                reply_markup: {
+                    inline_keyboard: [
+                        // The button callback now includes the Transaction ID
+                        [{ text: __("deposit.i_have_paid_button"), callback_data: `deposit_paid_${newTx.id}` }],
+                        [{ text: __("common.cancel"), callback_data: "cancel_action" }]
+                    ]
+                }
+            });
+            return; // Stay in this state until user clicks a button
+            // --- END OF FIX ---
         }
 
         // --- 3. Awaiting Wallet Address ---
         else if (user.state === 'awaiting_wallet_address') {
+            // --- FIX: Pass `__` to error keyboard ---
             if (!isValidWallet(text)) {
-                return bot.sendMessage(chatId, __("withdraw.invalid_wallet"), { reply_markup: getCancelKeyboard(user) });
+                return bot.sendMessage(chatId, __("withdraw.invalid_wallet"), { reply_markup: getCancelKeyboard(user, __) });
             }
+            // --- END OF FIX ---
             user.state = 'awaiting_wallet_network';
             user.stateContext = { wallet: text };
             await user.save();
             await bot.sendMessage(chatId, __("withdraw.ask_network"), {
-                reply_markup: getWithdrawNetworkKeyboard(user)
+                reply_markup: getWithdrawNetworkKeyboard(user, __) // Pass `__` here
             });
             return;
         }
@@ -146,11 +157,17 @@ const handleTextInput = async (bot, msg, user, __) => {
             const mainBalance = user.mainBalance || 0;
             const minWithdrawalText = toFixedSafe(MIN_WITHDRAWAL);
 
-            if (isNaN(amount) || amount <= 0) return bot.sendMessage(chatId, __("plans.err_invalid_amount"), { reply_markup: getCancelKeyboard(user) });
-            if (amount < MIN_WITHDRAWAL) return bot.sendMessage(chatId, __("withdraw.min_error", minWithdrawalText), { reply_markup: getCancelKeyboard(user) });
-            if (amount > mainBalance) {
-                return bot.sendMessage(chatId, __("withdraw.insufficient_funds", toFixedSafe(mainBalance)), { reply_markup: getCancelKeyboard(user) });
+            // --- FIX: Pass `__` to ALL error keyboards ---
+            if (isNaN(amount) || amount <= 0) {
+                return bot.sendMessage(chatId, __("plans.err_invalid_amount"), { reply_markup: getCancelKeyboard(user, __) });
             }
+            if (amount < MIN_WITHDRAWAL) {
+                return bot.sendMessage(chatId, __("withdraw.min_error", minWithdrawalText), { reply_markup: getCancelKeyboard(user, __) });
+            }
+            if (amount > mainBalance) {
+                return bot.sendMessage(chatId, __("withdraw.insufficient_funds", toFixedSafe(mainBalance)), { reply_markup: getCancelKeyboard(user, __) });
+            }
+            // --- END OF FIX ---
             
             const t = await sequelize.transaction();
             let newTx;
@@ -176,7 +193,6 @@ const handleTextInput = async (bot, msg, user, __) => {
 
             if (ADMIN_CHAT_ID) {
                 try {
-                    // We must use the admin's locale (default 'en') for this message
                     i18n.setLocale('en');
                     const admin__ = i18n.__;
                     const notifyText = admin__("withdraw.notify_admin", 
@@ -209,9 +225,10 @@ const handleTextInput = async (bot, msg, user, __) => {
     // Send main menu if state was reset
     if (user.state === 'none') {
         
-        // --- FIX: Pass `__` to getMainMenuKeyboard ---
-        // And use `msg.from.first_name` instead of `from.first_name`
-        await bot.sendMessage(chatId, __("main_menu_title", msg.from.first_name), {
+        // --- FIX: Use "Welcome back" message and `msg.from.first_name` ---
+        // This is your "Welcome, Motherfucker!" message
+        const welcomeText = __("language_set", __("language_name"), msg.from.first_name);
+        await bot.sendMessage(chatId, welcomeText, {
             reply_markup: getMainMenuKeyboard(user, __)
         });
         // --- END OF FIX ---
