@@ -48,7 +48,16 @@
 "invoice_created": "<b>BEP20 Invoice Created</b>\n\nAmount: <b>$%s USD</b>\n\nPlease click the button below to pay with USDT (BEP20).\n\n<i>Your balance will be credited automatically once the network confirms the transaction.</i>",
 "pay_button": "Click to Pay (BEP20 Only)",
 "api_error": "Could not create a deposit invoice. Please try again later.",
-"ipn_success": "Your deposit of %s USDT has been confirmed and added to your main balance!"
+"ipn_success": "Your deposit of %s USDT has been confirmed and added to your main balance!",
+
+"manual_instructions": "<b>Balance Deposit</b>\n\nYour Wallet: %s\n\n📋 <b>Instructions:</b>\n1️⃣ Send USDT (BEP20) to the address above\n2️⃣ Minimum amount: 10 USDT\n3️⃣ Use only the BSC (BEP20) network!\n4️⃣ Press 'I Have Paid' after sending\n\n⚠️ <b>Important:</b> Use only the BEP20 network, otherwise, the funds will be lost!",
+"i_have_paid_button": "I Have Paid",
+"admin_notified": "✅ <b>Thank you!</b>\n\nWe have notified the admin for verification. Your balance will be credited as soon as the transaction is confirmed.",
+"notify_admin": "New Deposit Verification Request:\n\nUser: %s (%s)\nAmount: %s USDT\n\nTransaction ID: %s",
+"admin_approve": "Approve Deposit",
+"admin_reject": "Reject Deposit",
+"notify_user_approved": "✅ Your deposit request for %s USDT has been approved and the amount added to your main balance.",
+"notify_user_rejected": "❌ Your deposit request was rejected. If you believe this is an error, please contact support."
 },
 "withdraw": {
 "min_error": "Minimum withdrawal is %s USDT.",
@@ -70,7 +79,7 @@
 "transactions": {
 "title": "Transaction History",
 "no_transactions": "You have no transactions yet.",
-"entry": "%s | %s | %s USDT | Status: %s"
+"entry": "%s | %S | %s USDT | Status: %s"
 },
 "referral": {
 "title": "Referral Program",
